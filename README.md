@@ -8,7 +8,7 @@ Features:
 
 Installation:
 
-On your phone, open this URL in Safari (iOS) or Chrome (Android) and:
+On your phone, open this URL (https://raytiw.github.io/lift-tracker/lift_tracker.html) in Safari (iOS) or Chrome (Android) and:
 
 iOS: Share icon → “Add to Home Screen”
 Android: Menu → “Install App” or “Add to Home Screen”
