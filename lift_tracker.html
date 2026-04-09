@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LIFT">
+<link rel="manifest" href="manifest.json">
+<title>LIFT — Powerlifting Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap');
+
+:root {
+  --bg:#0a0a0a; --surface:#111; --surface2:#1a1a1a; --border:#2a2a2a; --border2:#333;
+  --accent-mon:#ff4d1c; --accent-wed:#f0c040; --accent-fri:#3af0a0;
+  --text:#f0ede8; --text-muted:#555; --text-dim:#888;
+  --heavy:#ff4d1c; --medium:#f0c040; --light:#3af0a0;
+  --green:#3af0a0; --green-bg:#0e1f16; --green-border:#1e4a2e;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(10,10,10,0.96);backdrop-filter:blur(10px);z-index:100}
+.topbar-title{font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:3px}
+.topbar-date{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);text-align:right;line-height:1.5}
+
+/* DAY TABS */
+.day-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border)}
+.day-tab{padding:12px 6px 10px;text-align:center;cursor:pointer;border:none;background:none;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;transition:all .15s;border-bottom:2px solid transparent}
+.day-tab.active-mon{color:var(--accent-mon);border-bottom-color:var(--accent-mon)}
+.day-tab.active-wed{color:var(--accent-wed);border-bottom-color:var(--accent-wed)}
+.day-tab.active-fri{color:var(--accent-fri);border-bottom-color:var(--accent-fri)}
+.day-tab .tab-label{font-family:'Bebas Neue',sans-serif;font-size:20px;display:block;letter-spacing:2px}
+.day-tab .tab-sub{display:block;margin-top:2px;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+
+/* PANELS */
+.panel{display:none;padding:14px 14px 120px}
+.panel.active{display:block}
+.section-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin:18px 0 8px 2px}
+
+/* INTENSITY BADGE */
+.intensity-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.badge-heavy{background:rgba(255,77,28,.12);color:var(--heavy);border:1px solid rgba(255,77,28,.25)}
+.badge-medium{background:rgba(240,192,64,.1);color:var(--medium);border:1px solid rgba(240,192,64,.2)}
+.badge-light{background:rgba(58,240,160,.08);color:var(--light);border:1px solid rgba(58,240,160,.15)}
+
+/* MAIN EXERCISE BLOCK */
+.exercise-block{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden}
+.exercise-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;border-bottom:1px solid var(--border)}
+.exercise-name{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px}
+.exercise-meta{display:flex;align-items:center;gap:8px}
+.sets-area{padding:10px 14px 12px}
+.sets-header{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:5px;margin-bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;padding:0 2px}
+.set-row{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:5px;margin-bottom:5px;align-items:center}
+.set-num{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);text-align:center}
+.set-input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 4px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:14px;text-align:center;width:100%;-webkit-appearance:none;appearance:none}
+.set-input:focus{outline:none;border-color:var(--border2)}
+.set-done-btn{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);font-size:16px;height:36px;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.set-done-btn.done{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.set-controls{display:flex;gap:6px;margin-top:6px}
+.set-ctrl-btn{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 12px;cursor:pointer}
+.set-ctrl-btn:active{background:var(--border)}
+.weight-adjust{display:flex;gap:5px;margin-top:8px}
+.adj-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 6px;cursor:pointer;flex:1}
+.adj-btn:active{background:var(--border)}
+.session-footer{display:flex;gap:8px;margin-top:10px;align-items:center}
+.rpe-wrap{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 12px;flex:1}
+.rpe-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px}
+.rpe-val{font-family:'Bebas Neue',sans-serif;font-size:22px;min-width:24px;text-align:center}
+.rpe-btn{background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:0 3px;line-height:1}
+
+/* ASSIST BLOCK — with weight tracking */
+.assist-block{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;overflow:hidden}
+.assist-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;border-bottom:1px solid var(--border)}
+.assist-name{font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text)}
+.assist-scheme{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted)}
+.assist-body{padding:8px 14px 10px}
+.assist-set-row{display:grid;grid-template-columns:28px 1fr 1fr 40px;gap:5px;margin-bottom:5px;align-items:center}
+.assist-adj{display:flex;gap:5px;margin-top:6px}
+.assist-adj-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;padding:4px 6px;cursor:pointer;flex:1}
+.assist-adj-btn:active{background:var(--border)}
+
+/* NOTES + SAVE */
+.notes-input{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:10px 12px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;width:100%;resize:none;min-height:56px}
+.notes-input:focus{outline:none;border-color:var(--border2)}
+.notes-input::placeholder{color:var(--text-muted)}
+.save-btn{position:fixed;bottom:58px;left:14px;right:14px;background:var(--text);color:var(--bg);border:none;border-radius:6px;padding:14px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;cursor:pointer;z-index:50;transition:all .15s}
+.save-btn:active{transform:scale(.98)}
+.save-btn.saved{background:var(--green)}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,.97);border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;z-index:200}
+.nav-btn{background:none;border:none;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;padding:10px 4px 12px;cursor:pointer;text-align:center;transition:color .1s}
+.nav-btn.active{color:var(--text)}
+.nav-icon{font-size:18px;display:block;margin-bottom:2px}
+
+/* VIEWS */
+.view{display:none}
+.view.active{display:block}
+
+/* PROGRESS */
+.progress-wrap{padding:14px 14px 100px}
+.progress-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}
+.pr-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:12px}
+.pr-exercise{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.pr-weight{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1}
+.pr-unit{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);margin-left:3px}
+.pr-e1rm{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);margin-top:3px}
+.pr-1rm-pct{font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:2px}
+.pct-good{color:var(--green)} .pct-ok{color:var(--medium)} .pct-low{color:var(--text-muted)}
+.history-entry{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:11px 14px;margin-bottom:7px}
+.history-header{display:flex;justify-content:space-between;margin-bottom:5px}
+.history-day-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:1px}
+.history-date{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted)}
+.history-lifts{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.7}
+.history-lift-val{color:var(--text);font-weight:600}
+.history-notes{font-size:11px;color:var(--text-muted);margin-top:5px;font-style:italic;border-top:1px solid var(--border);padding-top:5px}
+.progress-empty{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);text-align:center;padding:40px 20px;line-height:1.8}
+.export-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:12px;padding:12px 16px;cursor:pointer;width:100%;text-align:center;margin-bottom:16px;letter-spacing:1px;display:flex;align-items:center;justify-content:center;gap:8px}
+.export-btn:active{background:var(--surface2)}
+
+/* SETTINGS */
+.settings-wrap{padding:14px 14px 100px}
+.settings-title{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:12px}
+
+/* 1RM CARD */
+.orm-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:20px}
+.orm-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.orm-row:last-child{margin-bottom:0}
+.orm-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:1px;width:110px;flex-shrink:0;text-transform:uppercase}
+.orm-input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:16px;text-align:center;width:90px;-webkit-appearance:none;appearance:none}
+.orm-input:focus{outline:none;border-color:var(--border2)}
+.orm-unit{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted)}
+.orm-info{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);margin-left:4px;flex:1}
+
+/* DAY CONFIG */
+.day-config{background:var(--surface);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;overflow:hidden}
+.day-config-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid transparent;cursor:pointer}
+.day-config-header.open{border-bottom-color:var(--border)}
+.day-config-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px}
+.day-config-body{padding:12px 14px;display:none}
+.day-config-body.open{display:block}
+.cfg-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;margin-bottom:8px;text-transform:uppercase}
+.cfg-exercise-row{display:flex;gap:8px;align-items:center;margin-bottom:7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px}
+.cfg-ex-name{flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cfg-intensity{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:10px;padding:3px 6px;border-radius:3px;cursor:pointer;-webkit-appearance:none;appearance:none}
+.cfg-intensity:focus{outline:none}
+.cfg-remove{background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0}
+.cfg-input-row{display:flex;gap:7px;margin-top:8px}
+.cfg-input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 10px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:13px;flex:1}
+.cfg-input:focus{outline:none;border-color:var(--border2)}
+.cfg-add-btn{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 12px;cursor:pointer;white-space:nowrap}
+.cfg-add-btn:active{background:var(--border)}
+
+/* ASSIST CONFIG ROWS */
+.assist-cfg-row{display:flex;gap:8px;align-items:center;margin-bottom:7px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px}
+.assist-cfg-name{flex:1;font-family:'IBM Plex Sans',sans-serif;font-size:12px}
+.assist-cfg-scheme{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);width:50px;flex-shrink:0}
+.assist-cfg-remove{background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:0 2px;flex-shrink:0}
+.assist-input-wrap{display:flex;gap:6px;margin-top:7px}
+.assist-input-name{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:12px;flex:1}
+.assist-input-scheme{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:11px;width:58px}
+.assist-input-name:focus,.assist-input-scheme:focus{outline:none;border-color:var(--border2)}
+.cfg-sep{height:1px;background:var(--border);margin:12px 0}
+.save-settings-btn{background:var(--text);color:var(--bg);border:none;border-radius:6px;padding:13px 20px;font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:3px;cursor:pointer;width:100%;margin-top:10px;transition:all .15s}
+.save-settings-btn:active{transform:scale(.98)}
+.save-settings-btn.saved{background:var(--green)}
+.chevron{transition:transform .2s;display:inline-block;font-size:11px;color:var(--text-muted)}
+.chevron.open{transform:rotate(90deg)}
+
+/* TOAST */
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--text);color:var(--bg);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:9px 18px;border-radius:4px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">LIFT</div>
+  <div class="topbar-date" id="topbarDate"></div>
+</div>
+
+<!-- ══ WORKOUT ══ -->
+<div class="view active" id="viewWorkout">
+  <div class="day-tabs">
+    <button class="day-tab" id="tabMon" onclick="switchDay('mon')">
+      <span class="tab-label">MO</span><span class="tab-sub" id="subtextMon"></span>
+    </button>
+    <button class="day-tab" id="tabWed" onclick="switchDay('wed')">
+      <span class="tab-label">MI</span><span class="tab-sub" id="subtextWed"></span>
+    </button>
+    <button class="day-tab" id="tabFri" onclick="switchDay('fri')">
+      <span class="tab-label">FR</span><span class="tab-sub" id="subtextFri"></span>
+    </button>
+  </div>
+  <div class="panel" id="panelMon"></div>
+  <div class="panel" id="panelWed"></div>
+  <div class="panel" id="panelFri"></div>
+</div>
+
+<!-- ══ PROGRESS ══ -->
+<div class="view" id="viewProgress">
+  <div class="progress-wrap">
+    <div class="section-label">Aktuell vs. 1RM-Ziel</div>
+    <div class="progress-grid" id="prGrid"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="export-btn" style="margin-bottom:0;flex:1" onclick="exportExcel()">📥 Exportieren</button>
+      <button class="export-btn" style="margin-bottom:0;flex:1" onclick="document.getElementById('importInput').click()">📤 Importieren</button>
+    </div>
+    <input type="file" id="importInput" accept=".xlsx" style="display:none" onchange="importExcel(this)">
+    <div class="section-label">Letzte Einheiten</div>
+    <div id="historyList"></div>
+  </div>
+</div>
+
+<!-- ══ SETTINGS ══ -->
+<div class="view" id="viewSettings">
+  <div class="settings-wrap">
+
+    <div class="settings-title">1RM — MAXIMALGEWICHTE</div>
+    <div class="orm-card" id="ormCard"></div>
+
+    <div class="settings-title">TRAININGSTAGE</div>
+    <div id="dayCfgContainer"></div>
+
+    <button class="save-settings-btn" id="saveSettingsBtn" onclick="saveSettings()">EINSTELLUNGEN SPEICHERN</button>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn active" id="navWorkout" onclick="showView('workout')"><span class="nav-icon">🏋️</span>TRAINING</button>
+  <button class="nav-btn" id="navProgress" onclick="showView('progress')"><span class="nav-icon">📈</span>VERLAUF</button>
+  <button class="nav-btn" id="navSettings" onclick="showView('settings')"><span class="nav-icon">⚙️</span>EINSTELLUNGEN</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ══════════════════════════════════════════════════════════
+// DEFAULT STATE
+// ══════════════════════════════════════════════════════════
+const STORAGE_KEY = 'lift_powerlifting';
+
+const DEFAULT_STATE = {
+  oneRM: { 'Bench Press': 110, 'Squat': 160, 'Deadlift': 190 },
+  dayExercises: {
+    mon: [{ name:'Bench Press', intensity:'light' }, { name:'Squat', intensity:'heavy' }],
+    wed: [{ name:'Bench Press', intensity:'medium' }, { name:'Deadlift', intensity:'heavy' }],
+    fri: [{ name:'Bench Press', intensity:'heavy' }, { name:'Squat', intensity:'medium' }],
+  },
+  assistExercises: {
+    mon: [
+      { name:'OHP',           scheme:'3×8',   sets:3, kg:50 },
+      { name:'Romanian DL',   scheme:'3×8',   sets:3, kg:80 },
+      { name:'Face Pulls',    scheme:'3×15',  sets:3, kg:20 },
+    ],
+    wed: [
+      { name:'Barbell Row',       scheme:'3×8',   sets:3, kg:65 },
+      { name:'Tricep Pushdown',   scheme:'3×12',  sets:3, kg:30 },
+      { name:'Lat Pulldown',      scheme:'3×10',  sets:3, kg:60 },
+    ],
+    fri: [
+      { name:'Close Grip Bench',  scheme:'3×8',   sets:3, kg:80 },
+      { name:'Leg Press',         scheme:'3×10',  sets:3, kg:120 },
+      { name:'Dips',              scheme:'3×max', sets:3, kg:0 },
+    ],
+  },
+  sets: {},  // generated from 1RM on first load via ensureMainSets
+  assistSets: {}, // key: `${day}-a${ei}` → [{kg, reps, done}]
+  rpe: {'mon-0':7,'mon-1':8,'wed-0':7,'wed-1':8,'fri-0':8,'fri-1':7},
+  assistDone: {},
+  notes: {},
+  history: [],
+};
+
+let state = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+function loadState() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) {
+      const p = JSON.parse(s);
+      state = { ...DEFAULT_STATE, ...p,
+        oneRM: p.oneRM || DEFAULT_STATE.oneRM,
+        dayExercises: p.dayExercises || DEFAULT_STATE.dayExercises,
+        assistExercises: p.assistExercises || DEFAULT_STATE.assistExercises,
+        sets: p.sets || DEFAULT_STATE.sets,
+        assistSets: p.assistSets || {},
+        rpe: p.rpe || DEFAULT_STATE.rpe,
+        assistDone: p.assistDone || {},
+        notes: p.notes || {},
+        history: p.history || [],
+      };
+    }
+  } catch(e) { console.error(e); }
+}
+
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+// ══════════════════════════════════════════════════════════
+// KEYS & DEFAULTS
+// ══════════════════════════════════════════════════════════
+function mainKey(day, ei) { return `${day}-${ei}`; }
+function assistKey(day, ei) { return `${day}-a${ei}`; }
+
+// Intensity → % of 1RM mapping
+const INTENSITY_PCT = { heavy: 0.875, medium: 0.775, light: 0.675 };
+
+function roundTo25(kg) { return Math.round(kg / 2.5) * 2.5; }
+
+function suggestWeight(exName, intensity) {
+  const orm = state.oneRM[exName];
+  if (!orm) return 100;
+  return roundTo25(orm * (INTENSITY_PCT[intensity] || 0.775));
+}
+
+function ensureMainSets(day, ei) {
+  const k = mainKey(day, ei);
+  if (!state.sets[k]) {
+    const ex = (state.dayExercises[day] || [])[ei];
+    const kg = ex ? suggestWeight(ex.name, ex.intensity) : 100;
+    state.sets[k] = [{kg, reps:3}, {kg, reps:3}, {kg, reps:3}];
+  }
+  if (state.rpe[k] === undefined) state.rpe[k] = 7;
+}
+
+function ensureAssistSets(day, ei) {
+  const k = assistKey(day, ei);
+  const ex = (state.assistExercises[day] || [])[ei];
+  if (!ex) return;
+  if (!state.assistSets[k]) {
+    state.assistSets[k] = Array.from({length: ex.sets}, () => ({kg: ex.kg || 0, reps: parseInt(ex.scheme) || 8, done: false}));
+  }
+  // ensure length matches
+  while (state.assistSets[k].length < ex.sets) state.assistSets[k].push({kg: ex.kg||0, reps:8, done:false});
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDER PANEL
+// ══════════════════════════════════════════════════════════
+function renderPanel(day) {
+  const panel = document.getElementById('panel' + cap(day));
+  const mainExes = state.dayExercises[day] || [];
+  const assistExes = state.assistExercises[day] || [];
+  let html = '';
+
+  // ── Main exercises ──
+  html += `<div class="section-label">Hauptübungen</div>`;
+  mainExes.forEach((ex, ei) => {
+    ensureMainSets(day, ei);
+    const k = mainKey(day, ei);
+    const sets = state.sets[k];
+    const rpe = state.rpe[k] || 7;
+    const badgeClass = {heavy:'badge-heavy',medium:'badge-medium',light:'badge-light'}[ex.intensity]||'badge-medium';
+    const badgeText = {heavy:'SCHWER',medium:'MITTEL',light:'LEICHT'}[ex.intensity]||ex.intensity;
+    const or = state.oneRM[ex.name];
+    const topKg = sets.length ? Math.max(...sets.map(s=>s.kg)) : 0;
+    const pctHtml = or ? (() => {
+      const pct = Math.round(topKg / or * 100);
+      const targetPct = Math.round((INTENSITY_PCT[ex.intensity] || 0.775) * 100);
+      const diff = pct - targetPct;
+      const cls = Math.abs(diff) <= 5 ? 'pct-good' : diff > 5 ? 'pct-ok' : 'pct-low';
+      const sign = diff > 0 ? '+' : '';
+      return `<span class="${cls}" style="font-family:'IBM Plex Mono',monospace;font-size:10px">${pct}% (Ziel ${targetPct}%${diff!==0?' '+sign+diff:''})</span>`;
+    })() : '';
+
+    html += `
+    <div class="exercise-block">
+      <div class="exercise-header">
+        <div class="exercise-name">${ex.name.toUpperCase()}</div>
+        <div class="exercise-meta">${pctHtml}<span class="intensity-badge ${badgeClass}">${badgeText}</span></div>
+      </div>
+      <div class="sets-area">
+        <div class="sets-header"><div>#</div><div>kg</div><div>Wdh</div><div>✓</div></div>
+        <div id="sets-${k}">${renderSetRows(k)}</div>
+        <div class="set-controls">
+          <button class="set-ctrl-btn" onclick="addMainSet('${k}')">+ Satz</button>
+          <button class="set-ctrl-btn" onclick="removeMainSet('${k}')">− Satz</button>
+        </div>
+        <div class="weight-adjust">
+          <button class="adj-btn" onclick="adjustMain('${k}',-5)">−5</button>
+          <button class="adj-btn" onclick="adjustMain('${k}',-2.5)">−2.5</button>
+          <button class="adj-btn" onclick="adjustMain('${k}',2.5)">+2.5</button>
+          <button class="adj-btn" onclick="adjustMain('${k}',5)">+5</button>
+        </div>
+        <div class="session-footer">
+          <div class="rpe-wrap">
+            <span class="rpe-label">RPE</span>
+            <button class="rpe-btn" onclick="changeRPE('${k}',-1)">−</button>
+            <span class="rpe-val" id="rpe-${k}">${rpe}</span>
+            <button class="rpe-btn" onclick="changeRPE('${k}',+1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // ── Assist exercises ──
+  html += `<div class="section-label">Assistenzübungen</div>`;
+  assistExes.forEach((ex, ei) => {
+    ensureAssistSets(day, ei);
+    const k = assistKey(day, ei);
+    const sets = state.assistSets[k] || [];
+    const setsHtml = sets.map((s, si) => `
+      <div class="assist-set-row">
+        <div class="set-num">${si+1}</div>
+        <input class="set-input" type="number" value="${s.kg}" step="2.5"
+          onchange="updateAssistSet('${k}',${si},'kg',this.value)" inputmode="decimal">
+        <input class="set-input" type="number" value="${s.reps}" min="1" max="50"
+          onchange="updateAssistSet('${k}',${si},'reps',this.value)" inputmode="numeric">
+        <button class="set-done-btn ${s.done?'done':''}" onclick="toggleAssistDone('${k}',${si})">${s.done?'✓':'○'}</button>
+      </div>`).join('');
+
+    html += `
+    <div class="assist-block">
+      <div class="assist-header">
+        <span class="assist-name">${ex.name}</span>
+        <span class="assist-scheme">${ex.scheme}</span>
+      </div>
+      <div class="assist-body">
+        <div class="sets-header"><div>#</div><div>kg</div><div>Wdh</div><div>✓</div></div>
+        <div id="asets-${k}">${setsHtml}</div>
+        <div class="assist-adj">
+          <button class="assist-adj-btn" onclick="adjustAssist('${k}',-5)">−5</button>
+          <button class="assist-adj-btn" onclick="adjustAssist('${k}',-2.5)">−2.5</button>
+          <button class="assist-adj-btn" onclick="adjustAssist('${k}',2.5)">+2.5</button>
+          <button class="assist-adj-btn" onclick="adjustAssist('${k}',5)">+5</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Notes + Save
+  const notesVal = (state.notes[day]) ? state.notes[day] : '';
+  html += `
+    <div class="section-label">Notizen</div>
+    <textarea class="notes-input" id="notes-${day}" placeholder="Wie lief das Training?">${notesVal}</textarea>
+    <button class="save-btn" id="savebtn-${day}" onclick="saveWorkout('${day}')">TRAINING SPEICHERN</button>`;
+
+  panel.innerHTML = html;
+}
+
+function renderSetRows(k) {
+  return (state.sets[k] || []).map((s, si) => `
+    <div class="set-row">
+      <div class="set-num">${si+1}</div>
+      <input class="set-input" type="number" value="${s.kg}" step="2.5"
+        onchange="updateMainSet('${k}',${si},'kg',this.value)" inputmode="decimal">
+      <input class="set-input" type="number" value="${s.reps}" min="1" max="30"
+        onchange="updateMainSet('${k}',${si},'reps',this.value)" inputmode="numeric">
+      <button class="set-done-btn ${s.done?'done':''}" onclick="toggleMainDone('${k}',${si})">${s.done?'✓':'○'}</button>
+    </div>`).join('');
+}
+
+function renderAssistSetRows(k) {
+  return (state.assistSets[k] || []).map((s, si) => `
+    <div class="assist-set-row">
+      <div class="set-num">${si+1}</div>
+      <input class="set-input" type="number" value="${s.kg}" step="2.5"
+        onchange="updateAssistSet('${k}',${si},'kg',this.value)" inputmode="decimal">
+      <input class="set-input" type="number" value="${s.reps}" min="1" max="50"
+        onchange="updateAssistSet('${k}',${si},'reps',this.value)" inputmode="numeric">
+      <button class="set-done-btn ${s.done?'done':''}" onclick="toggleAssistDone('${k}',${si})">${s.done?'✓':'○'}</button>
+    </div>`).join('');
+}
+
+function renderAllPanels() {
+  ['mon','wed','fri'].forEach(d => renderPanel(d));
+  updateTabSubtexts();
+}
+
+function updateTabSubtexts() {
+  ['mon','wed','fri'].forEach(d => {
+    const exes = state.dayExercises[d] || [];
+    const i = {heavy:'S',medium:'M',light:'L'};
+    const el = document.getElementById('subtext' + cap(d));
+    if (el) el.textContent = exes.map(e => `${e.name.split(' ')[0]} ${i[e.intensity]||''}`).join(' · ');
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// MAIN SET OPS
+// ══════════════════════════════════════════════════════════
+function updateMainSet(k, si, field, val) {
+  state.sets[k][si][field] = parseFloat(val)||0;
+  persist();
+  // update %1RM display if visible
+  refreshPctDisplay(k);
+}
+
+function toggleMainDone(k, si) {
+  state.sets[k][si].done = !state.sets[k][si].done;
+  const c = document.getElementById('sets-' + k);
+  if (c) { const btn = c.querySelectorAll('.set-done-btn')[si]; if(btn){btn.className='set-done-btn'+(state.sets[k][si].done?' done':'');btn.textContent=state.sets[k][si].done?'✓':'○';} }
+  persist();
+}
+
+function addMainSet(k) {
+  const last = state.sets[k][state.sets[k].length-1];
+  state.sets[k].push({kg:last?last.kg:100, reps:last?last.reps:3, done:false});
+  rerenderMainSets(k); persist();
+}
+
+function removeMainSet(k) {
+  if (state.sets[k].length > 1) { state.sets[k].pop(); rerenderMainSets(k); persist(); }
+}
+
+function rerenderMainSets(k) {
+  const c = document.getElementById('sets-' + k);
+  if (c) c.innerHTML = renderSetRows(k);
+}
+
+function adjustMain(k, delta) {
+  state.sets[k].forEach(s => { s.kg = Math.max(0, Math.round((s.kg+delta)*2)/2); });
+  rerenderMainSets(k); persist(); refreshPctDisplay(k);
+}
+
+function refreshPctDisplay(k) {
+  // find which exercise this key belongs to
+  const parts = k.split('-');
+  const day = parts[0], ei = parseInt(parts[1]);
+  const ex = (state.dayExercises[day]||[])[ei];
+  if (!ex) return;
+  const or = state.oneRM[ex.name];
+  if (!or) return;
+  const topKg = state.sets[k].length ? Math.max(...state.sets[k].map(s=>s.kg)) : 0;
+  const pct = Math.round(topKg/or*100);
+  const cls = pct>=90?'pct-good':pct>=80?'pct-ok':'pct-low';
+  // find the exercise block and update the pct span
+  const exBlocks = document.querySelectorAll(`#panel${cap(day)} .exercise-block`);
+  if (exBlocks[ei]) {
+    const meta = exBlocks[ei].querySelector('.exercise-meta');
+    if (meta) {
+      const existing = meta.querySelector('[class^="pct"]');
+      if (existing) { existing.className=cls; existing.textContent=`${pct}% 1RM`; }
+    }
+  }
+}
+
+function changeRPE(k, delta) {
+  state.rpe[k] = Math.min(10, Math.max(5, (state.rpe[k]||7)+delta));
+  const el = document.getElementById('rpe-' + k);
+  if (el) el.textContent = state.rpe[k];
+  persist();
+}
+
+// ══════════════════════════════════════════════════════════
+// ASSIST SET OPS
+// ══════════════════════════════════════════════════════════
+function updateAssistSet(k, si, field, val) {
+  if (!state.assistSets[k]) return;
+  state.assistSets[k][si][field] = parseFloat(val)||0;
+  persist();
+}
+
+function toggleAssistDone(k, si) {
+  if (!state.assistSets[k]) return;
+  state.assistSets[k][si].done = !state.assistSets[k][si].done;
+  const c = document.getElementById('asets-' + k);
+  if (c) { const btn = c.querySelectorAll('.set-done-btn')[si]; if(btn){const d=state.assistSets[k][si].done;btn.className='set-done-btn'+(d?' done':'');btn.textContent=d?'✓':'○';} }
+  persist();
+}
+
+function adjustAssist(k, delta) {
+  if (!state.assistSets[k]) return;
+  state.assistSets[k].forEach(s => { s.kg = Math.max(0, Math.round((s.kg+delta)*2)/2); });
+  const c = document.getElementById('asets-' + k);
+  if (c) c.innerHTML = renderAssistSetRows(k);
+  persist();
+}
+
+// ══════════════════════════════════════════════════════════
+// DAY SWITCH
+// ══════════════════════════════════════════════════════════
+let currentDay = 'mon';
+function switchDay(day) {
+  currentDay = day;
+  ['mon','wed','fri'].forEach(d => {
+    document.getElementById('panel'+cap(d)).classList.remove('active');
+    document.getElementById('tab'+cap(d)).className = 'day-tab';
+  });
+  document.getElementById('panel'+cap(day)).classList.add('active');
+  document.getElementById('tab'+cap(day)).className = `day-tab active-${day}`;
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════════
+// SAVE WORKOUT
+// ══════════════════════════════════════════════════════════
+function saveWorkout(day) {
+  const dayNames = {mon:'Montag',wed:'Mittwoch',fri:'Freitag'};
+  const mainExes = state.dayExercises[day] || [];
+  const assistExes = state.assistExercises[day] || [];
+  const notesEl = document.getElementById('notes-' + day);
+  state.notes[day] = notesEl ? notesEl.value : '';
+
+  const entry = {
+    date: new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),
+    dateISO: new Date().toISOString().split('T')[0],
+    day, dayName: dayNames[day],
+    lifts: mainExes.map((ex, ei) => {
+      const k = mainKey(day, ei);
+      const sets = state.sets[k] || [];
+      return {
+        name: ex.name, intensity: ex.intensity,
+        sets: sets.map(s=>`${s.kg}×${s.reps}`).join(', '),
+        topSet: sets.length ? Math.max(...sets.map(s=>s.kg)) : 0,
+        totalVol: sets.reduce((a,s)=>a+(s.kg*s.reps),0),
+        rpe: state.rpe[k] || 7,
+        setsRaw: sets.map(s=>({kg:s.kg,reps:s.reps})),
+      };
+    }),
+    assist: assistExes.map((ex, ei) => {
+      const k = assistKey(day, ei);
+      const sets = state.assistSets[k] || [];
+      return {
+        name: ex.name, scheme: ex.scheme,
+        sets: sets.map(s=>`${s.kg}×${s.reps}`).join(', '),
+        setsRaw: sets.map(s=>({kg:s.kg,reps:s.reps})),
+      };
+    }),
+    notes: state.notes[day] || '',
+  };
+
+  if (!state.history) state.history = [];
+  state.history.unshift(entry);
+  if (state.history.length > 200) state.history.pop();
+
+  // Reset done states
+  mainExes.forEach((_, ei) => { state.sets[mainKey(day,ei)].forEach(s=>s.done=false); });
+  assistExes.forEach((_, ei) => { const k=assistKey(day,ei); if(state.assistSets[k]) state.assistSets[k].forEach(s=>s.done=false); });
+
+  persist();
+  renderPanel(day);
+  switchDay(day);
+  showToast('✓ ' + dayNames[day] + ' gespeichert!');
+  setTimeout(() => {
+    const btn = document.getElementById('savebtn-' + day);
+    if (btn) { btn.textContent='GESPEICHERT ✓'; btn.classList.add('saved'); setTimeout(()=>{btn.textContent='TRAINING SPEICHERN';btn.classList.remove('saved');},2000); }
+  }, 50);
+}
+
+// ══════════════════════════════════════════════════════════
+// PROGRESS
+// ══════════════════════════════════════════════════════════
+function calcE1RM(kg, reps) {
+  if (reps <= 1) return kg;
+  return Math.round(kg * (1 + reps/30) * 10) / 10;
+}
+
+function renderProgress() {
+  const exerciseMap = {};
+  ['mon','wed','fri'].forEach(d => {
+    (state.dayExercises[d]||[]).forEach((ex,ei) => {
+      const k = mainKey(d,ei);
+      if (!exerciseMap[ex.name]) exerciseMap[ex.name] = {name:ex.name, topKg:0, e1RM:0};
+      (state.sets[k]||[]).forEach(s => {
+        if (s.kg > exerciseMap[ex.name].topKg) { exerciseMap[ex.name].topKg=s.kg; exerciseMap[ex.name].e1RM=calcE1RM(s.kg,s.reps); }
+      });
+      (state.history||[]).forEach(entry => {
+        (entry.lifts||[]).filter(l=>l.name===ex.name).forEach(l => {
+          if (l.topSet > exerciseMap[ex.name].topKg) {
+            exerciseMap[ex.name].topKg=l.topSet;
+            (l.setsRaw||[]).forEach(s => { const e=calcE1RM(s.kg,s.reps); if(e>exerciseMap[ex.name].e1RM) exerciseMap[ex.name].e1RM=e; });
+          }
+        });
+      });
+    });
+  });
+
+  const grid = document.getElementById('prGrid');
+  const entries = Object.values(exerciseMap);
+  grid.innerHTML = entries.length ? entries.map(p => {
+    const or = state.oneRM[p.name];
+    const pctHtml = or ? (() => {
+      const pct = Math.round(p.topKg/or*100);
+      const cls = pct>=90?'pct-good':pct>=80?'pct-ok':'pct-low';
+      return `<div class="pr-1rm-pct ${cls}">${pct}% von ${or}kg Ziel</div>`;
+    })() : '';
+    return `
+    <div class="pr-card">
+      <div class="pr-exercise">${p.name.toUpperCase()}</div>
+      <div class="pr-weight">${p.topKg}<span class="pr-unit">kg</span></div>
+      <div class="pr-e1rm">e1RM ~${p.e1RM}kg</div>
+      ${pctHtml}
+    </div>`;
+  }).join('') : '<div style="grid-column:span 2;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-muted)">Noch keine Daten.</div>';
+
+  const histList = document.getElementById('historyList');
+  if (!state.history || !state.history.length) {
+    histList.innerHTML = '<div class="progress-empty">Noch keine gespeicherten Einheiten.</div>';
+    return;
+  }
+  histList.innerHTML = state.history.slice(0,15).map(e => {
+    const dayColor = {mon:'var(--accent-mon)',wed:'var(--accent-wed)',fri:'var(--accent-fri)'}[e.day]||'var(--text)';
+    const lifts = (e.lifts||[]).map(l=>`<div>${l.name}: <span class="history-lift-val">${l.sets}</span> RPE ${l.rpe}</div>`).join('');
+    const assistHtml = (e.assist||[]).filter(a=>a.sets).map(a=>`<div style="color:var(--text-muted)">${a.name}: ${a.sets}</div>`).join('');
+    return `
+    <div class="history-entry">
+      <div class="history-header">
+        <span class="history-day-tag" style="color:${dayColor}">${e.dayName}</span>
+        <span class="history-date">${e.date}</span>
+      </div>
+      <div class="history-lifts">${lifts}${assistHtml}</div>
+      ${e.notes?`<div class="history-notes">${e.notes}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════════════
+// EXCEL IMPORT
+// ══════════════════════════════════════════════════════════
+function importExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+
+      // Try to read "Hauptübungen" sheet
+      const sheetName = wb.SheetNames.find(n => n === 'Hauptübungen') || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+
+      if (rows.length < 2) { showToast('⚠️ Keine Daten gefunden'); return; }
+
+      const header = rows[0].map(h => String(h||'').trim());
+      const iDate = header.indexOf('Datum');
+      const iDay  = header.indexOf('Tag');
+      const iExer = header.indexOf('Übung');
+      const iInt  = header.indexOf('Intensität');
+      const iSatz = header.indexOf('Satz');
+      const iKg   = header.indexOf('kg');
+      const iWdh  = header.indexOf('Wdh');
+      const iRPE  = header.indexOf('RPE');
+      const iNote = header.indexOf('Notizen');
+
+      if (iDate < 0 || iExer < 0) { showToast('⚠️ Falsches Format'); return; }
+
+      // Group rows by date+day → build history entries
+      const entriesMap = {};
+      rows.slice(1).forEach(row => {
+        const dateRaw = row[iDate];
+        if (!dateRaw) return;
+        // Normalize date
+        let dateStr = String(dateRaw).trim();
+        // Excel may give serial number
+        if (!isNaN(dateRaw) && typeof dateRaw === 'number') {
+          const d = new Date(Math.round((dateRaw - 25569) * 86400 * 1000));
+          dateStr = d.toISOString().split('T')[0];
+        }
+        const dayName = iDay >= 0 ? String(row[iDay]||'') : '';
+        const mapKey = dateStr + '|' + dayName;
+
+        if (!entriesMap[mapKey]) {
+          const dayCode = dayName.includes('Montag') ? 'mon' : dayName.includes('Mittwoch') ? 'wed' : dayName.includes('Freitag') ? 'fri' : 'mon';
+          entriesMap[mapKey] = {
+            date: dateStr.includes('.') ? dateStr : new Date(dateStr).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),
+            dateISO: dateStr.includes('-') ? dateStr : '',
+            day: dayCode, dayName,
+            liftsMap: {}, notes: iNote >= 0 && row[iNote] ? String(row[iNote]) : '',
+          };
+        }
+
+        const entry = entriesMap[mapKey];
+        const exName = iExer >= 0 ? String(row[iExer]||'') : '';
+        const setNum = iSatz >= 0 ? parseInt(row[iSatz]) || 1 : 1;
+        const kg     = iKg >= 0 ? parseFloat(row[iKg]) || 0 : 0;
+        const reps   = iWdh >= 0 ? parseInt(row[iWdh]) || 0 : 0;
+        const rpe    = iRPE >= 0 ? parseFloat(row[iRPE]) || 7 : 7;
+        const inten  = iInt >= 0 ? String(row[iInt]||'') : '';
+
+        if (!exName) return;
+        if (!entry.liftsMap[exName]) entry.liftsMap[exName] = {name:exName, intensity:inten, setsRaw:[], rpe, topSet:0, totalVol:0};
+        const lift = entry.liftsMap[exName];
+        lift.setsRaw.push({kg, reps});
+        if (kg > lift.topSet) lift.topSet = kg;
+        lift.totalVol += kg * reps;
+        if (setNum === 1) lift.rpe = rpe; // take first-set RPE
+      });
+
+      // Convert to history array
+      const imported = Object.values(entriesMap).map(e => ({
+        ...e,
+        lifts: Object.values(e.liftsMap).map(l => ({
+          ...l,
+          sets: l.setsRaw.map(s=>`${s.kg}×${s.reps}`).join(', '),
+        })),
+        assist: [],
+      }));
+
+      if (!imported.length) { showToast('⚠️ Keine Einträge gefunden'); return; }
+
+      // Merge: add imported entries not already in history (match by dateISO+dayName+first lift name)
+      const existingKeys = new Set((state.history||[]).map(e => e.dateISO+'|'+e.dayName));
+      const newEntries = imported.filter(e => !existingKeys.has(e.dateISO+'|'+e.dayName));
+
+      state.history = [...(state.history||[]), ...newEntries]
+        .sort((a,b) => (b.dateISO||b.date) > (a.dateISO||a.date) ? 1 : -1);
+
+      persist();
+      showToast(`✅ ${newEntries.length} Einheiten importiert`);
+      renderProgress();
+    } catch(err) {
+      console.error(err);
+      showToast('❌ Import fehlgeschlagen');
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ══════════════════════════════════════════════════════════
+// EXCEL EXPORT
+// ══════════════════════════════════════════════════════════
+function exportExcel() {
+  if (!state.history || !state.history.length) { showToast('Keine Daten!'); return; }
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: Hauptübungen Detail
+  const rows1 = [['Datum','Tag','Übung','Intensität','Satz','kg','Wdh','Volumen','RPE','e1RM','Notizen']];
+  state.history.forEach(entry => {
+    (entry.lifts||[]).forEach(lift => {
+      (lift.setsRaw||[{kg:lift.topSet,reps:'?'}]).forEach((s,si) => {
+        rows1.push([entry.dateISO||entry.date, entry.dayName, lift.name, lift.intensity||'',
+          si+1, s.kg, s.reps, s.reps!=='?'?s.kg*s.reps:'', si===0?lift.rpe:'',
+          si===0?calcE1RM(lift.topSet,(lift.setsRaw||[{reps:1}])[0].reps):'',
+          si===0?(entry.notes||''):'']);
+      });
+    });
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(rows1);
+  ws1['!cols'] = [12,10,18,10,6,8,6,10,6,10,30].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws1, 'Hauptübungen');
+
+  // Sheet 2: Assistenz
+  const rows2 = [['Datum','Tag','Übung','Satz','kg','Wdh','Volumen']];
+  state.history.forEach(entry => {
+    (entry.assist||[]).forEach(a => {
+      (a.setsRaw||[]).forEach((s,si) => {
+        rows2.push([entry.dateISO||entry.date, entry.dayName, a.name, si+1, s.kg, s.reps, s.kg*s.reps]);
+      });
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+  ws2['!cols'] = [12,10,18,6,8,6,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws2, 'Assistenz');
+
+  // Sheet 3: Zusammenfassung
+  const rows3 = [['Übung','Datum','Top-Gewicht (kg)','RPE','Volumen (kg)','e1RM (kg)']];
+  const exMap = {};
+  state.history.forEach(entry => {
+    (entry.lifts||[]).forEach(l => {
+      if(!exMap[l.name]) exMap[l.name]=[];
+      exMap[l.name].push({date:entry.dateISO||entry.date, topSet:l.topSet, rpe:l.rpe, vol:l.totalVol||0,
+        e1rm: l.setsRaw?calcE1RM(l.topSet,l.setsRaw[0].reps):''});
+    });
+  });
+  Object.entries(exMap).forEach(([name,es])=>es.forEach(e=>rows3.push([name,e.date,e.topSet,e.rpe,e.vol,e.e1rm])));
+  const ws3 = XLSX.utils.aoa_to_sheet(rows3);
+  ws3['!cols'] = [18,12,16,6,14,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws3, 'Zusammenfassung');
+
+  // Sheet 4: 1RM
+  const rows4 = [['Übung','1RM Ziel (kg)','Aktuelles Top-Gewicht (kg)','% vom Ziel']];
+  Object.entries(state.oneRM).forEach(([name,or])=>{
+    let top = 0;
+    ['mon','wed','fri'].forEach(d=>{
+      (state.dayExercises[d]||[]).forEach((ex,ei)=>{
+        if(ex.name===name){const k=mainKey(d,ei);(state.sets[k]||[]).forEach(s=>{if(s.kg>top)top=s.kg;});}
+      });
+    });
+    rows4.push([name, or, top, top?Math.round(top/or*100)+'%':'—']);
+  });
+  const ws4 = XLSX.utils.aoa_to_sheet(rows4);
+  ws4['!cols'] = [18,16,22,12].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws4, '1RM Ziele');
+
+  const filename = `Powerlifting_${new Date().toISOString().split('T')[0]}.xlsx`;
+  XLSX.writeFile(wb, filename);
+  showToast('📥 ' + filename);
+}
+
+// ══════════════════════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════════════════════
+function renderORMCard() {
+  const ormCard = document.getElementById('ormCard');
+  const names = new Set(['Squat','Bench Press','Deadlift']);
+  ['mon','wed','fri'].forEach(d => (state.dayExercises[d]||[]).forEach(ex=>names.add(ex.name)));
+
+  ormCard.innerHTML = [...names].map(name => {
+    const val = state.oneRM[name] || '';
+    const pct90 = val ? Math.round(val*0.9*2)/2 : '';
+    const safeId = name.replace(/ /g,'-');
+    return `
+    <div class="orm-row">
+      <span class="orm-label">${name}</span>
+      <input class="orm-input" type="number" value="${val}" step="2.5" inputmode="decimal"
+        placeholder="—" data-exercise="${name}" oninput="updateORM(this)">
+      <span class="orm-unit">kg</span>
+      <span class="orm-info" id="orm-info-${safeId}">${pct90 ? '→ 90%: '+pct90+'kg' : ''}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderSettings() {
+  renderORMCard();
+  const container = document.getElementById('dayCfgContainer');
+  const days = ['mon','wed','fri'];
+  const dayNames = {mon:'MONTAG',wed:'MITTWOCH',fri:'FREITAG'};
+  const accentColor = {mon:'var(--accent-mon)',wed:'var(--accent-wed)',fri:'var(--accent-fri)'};
+
+  container.innerHTML = days.map(d => {
+    const exes = state.dayExercises[d]||[];
+    const assist = state.assistExercises[d]||[];
+
+    const exRows = exes.map((ex,ei) => `
+      <div class="cfg-exercise-row">
+        <span class="cfg-ex-name">${ex.name}</span>
+        <select class="cfg-intensity" onchange="updateExIntensity('${d}',${ei},this.value)">
+          <option value="heavy" ${ex.intensity==='heavy'?'selected':''}>SCHWER</option>
+          <option value="medium" ${ex.intensity==='medium'?'selected':''}>MITTEL</option>
+          <option value="light" ${ex.intensity==='light'?'selected':''}>LEICHT</option>
+        </select>
+        <button class="cfg-remove" onclick="removeMainEx('${d}',${ei})">×</button>
+      </div>`).join('');
+
+    const assistRows = assist.map((ex,ei) => `
+      <div class="assist-cfg-row">
+        <span class="assist-cfg-name">${ex.name}</span>
+        <span class="assist-cfg-scheme">${ex.scheme}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);width:44px;text-align:right;flex-shrink:0">${ex.kg||0}kg</span>
+        <button class="assist-cfg-remove" onclick="removeAssistEx('${d}',${ei})">×</button>
+      </div>`).join('');
+
+    return `
+    <div class="day-config">
+      <div class="day-config-header" id="cfghdr-${d}" onclick="toggleDayConfig('${d}')">
+        <div class="day-config-title" style="color:${accentColor[d]}">${dayNames[d]}</div>
+        <span class="chevron" id="chevron-${d}">▶</span>
+      </div>
+      <div class="day-config-body" id="cfg-body-${d}">
+        <div class="cfg-sub">Hauptübungen</div>
+        <div id="cfg-main-list-${d}">${exRows}</div>
+        <div class="cfg-input-row">
+          <input class="cfg-input" id="cfg-main-input-${d}" placeholder="Übung hinzufügen..."
+            onkeydown="if(event.key==='Enter')addMainEx('${d}')">
+          <button class="cfg-add-btn" onclick="addMainEx('${d}')">+ ADD</button>
+        </div>
+        <div class="cfg-sep"></div>
+        <div class="cfg-sub">Assistenzübungen</div>
+        <div id="cfg-assist-list-${d}">${assistRows}</div>
+        <div class="assist-input-wrap">
+          <input class="assist-input-name" id="cfg-assist-name-${d}" placeholder="Übung..."
+            onkeydown="if(event.key==='Enter')addAssistEx('${d}')">
+          <input class="assist-input-scheme" id="cfg-assist-scheme-${d}" placeholder="3×8" value="3×8">
+          <button class="cfg-add-btn" onclick="addAssistEx('${d}')">+ ADD</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDayConfig(day) {
+  const body = document.getElementById('cfg-body-' + day);
+  const hdr = document.getElementById('cfghdr-' + day);
+  const chevron = document.getElementById('chevron-' + day);
+  body.classList.toggle('open');
+  hdr.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+
+function updateExIntensity(day, ei, val) {
+  if (state.dayExercises[day] && state.dayExercises[day][ei]) state.dayExercises[day][ei].intensity = val;
+}
+
+function addMainEx(day) {
+  const input = document.getElementById('cfg-main-input-' + day);
+  const name = input.value.trim();
+  if (!name) return;
+  if (!state.dayExercises[day]) state.dayExercises[day] = [];
+  state.dayExercises[day].push({name, intensity:'medium'});
+  input.value = '';
+  renderSettings();
+}
+
+function removeMainEx(day, ei) {
+  if (state.dayExercises[day]) { state.dayExercises[day].splice(ei,1); renderSettings(); }
+}
+
+function addAssistEx(day) {
+  const nameEl = document.getElementById('cfg-assist-name-' + day);
+  const schemeEl = document.getElementById('cfg-assist-scheme-' + day);
+  const name = nameEl.value.trim();
+  if (!name) return;
+  const scheme = schemeEl.value.trim() || '3×8';
+  const setsMatch = scheme.match(/^(\d+)/);
+  const sets = setsMatch ? parseInt(setsMatch[1]) : 3;
+  if (!state.assistExercises[day]) state.assistExercises[day] = [];
+  state.assistExercises[day].push({name, scheme, sets, kg:0});
+  nameEl.value = '';
+  renderSettings();
+}
+
+function removeAssistEx(day, ei) {
+  if (state.assistExercises[day]) { state.assistExercises[day].splice(ei,1); renderSettings(); }
+}
+
+function updateORM(input) {
+  const name = input.dataset.exercise;
+  const val = parseFloat(input.value) || 0;
+  if (name) state.oneRM[name] = val;
+  const safeId = name ? name.replace(/ /g,'-') : '';
+  const infoEl = document.getElementById('orm-info-' + safeId);
+  if (infoEl) infoEl.textContent = val ? '→ 90%: ' + (Math.round(val*0.9*2)/2) + 'kg' : '';
+}
+
+function saveSettings() {
+  // Read ORM inputs via data-exercise attribute — reliable, no label matching needed
+  document.querySelectorAll('#ormCard .orm-input').forEach(inp => {
+    const name = inp.dataset.exercise;
+    if (name && inp.value !== '') state.oneRM[name] = parseFloat(inp.value) || 0;
+  });
+  persist();
+  renderAllPanels();
+  showView('workout');
+  showToast('✓ Einstellungen gespeichert!');
+}
+
+// ══════════════════════════════════════════════════════════
+// VIEW SWITCHING
+// ══════════════════════════════════════════════════════════
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view'+cap(v)).classList.add('active');
+  document.getElementById('nav'+cap(v)).classList.add('active');
+  if (v==='progress') renderProgress();
+  if (v==='settings') renderSettings();
+  window.scrollTo(0,0);
+}
+
+// ══════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════
+function cap(s) { return s.charAt(0).toUpperCase()+s.slice(1); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function setTopbarDate() {
+  const now = new Date();
+  const days = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  const months = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+  document.getElementById('topbarDate').innerHTML =
+    `${days[now.getDay()]}, ${now.getDate()}. ${months[now.getMonth()]} ${now.getFullYear()}`;
+}
+
+function autoSelectDay() {
+  const d = new Date().getDay();
+  switchDay(d===3?'wed':d===5?'fri':'mon');
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════
+loadState();
+setTopbarDate();
+renderAllPanels();
+autoSelectDay();
+
+// ── Service Worker (PWA offline support) ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
