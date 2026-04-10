@@ -1,6 +1,8 @@
 # lift-tracker
 LIFT - is my little powerlifting app. I use it to track my workouts and plan my exercises. 
 
+<img src="icon-192.png" width="96" alt="LIFT Icon">
+
 Features:
 - Enter 1RM for squats, bench presses, and deadlifts
 - Import and export workout data to and from Excel
