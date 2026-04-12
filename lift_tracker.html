@@ -28,14 +28,14 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .topbar-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);text-align:right;line-height:1.5}
 
 /* DAY TABS — größer, besser tippbar */
-.day-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border)}
-.day-tab{padding:10px 6px 8px;text-align:center;cursor:pointer;border:none;background:none;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:1px;text-transform:uppercase;transition:all .15s;border-bottom:3px solid transparent}
+.day-tabs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-bottom:1px solid var(--border)}
+.day-tab{padding:8px 2px 7px;text-align:center;cursor:pointer;border:none;background:none;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0;text-transform:uppercase;transition:all .15s;border-bottom:3px solid transparent}
 .day-tab.active-mon{color:var(--accent-mon);border-bottom-color:var(--accent-mon)}
 .day-tab.active-wed{color:var(--accent-wed);border-bottom-color:var(--accent-wed)}
 .day-tab.active-fri{color:var(--accent-fri);border-bottom-color:var(--accent-fri)}
 .day-tab.active-ext{color:#c084fc;border-bottom-color:#c084fc}
-.day-tab .tab-label{font-family:'Bebas Neue',sans-serif;font-size:26px;display:block;letter-spacing:2px}
-.day-tab .tab-sub{display:block;margin-top:1px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.day-tab .tab-label{font-family:'Bebas Neue',sans-serif;font-size:20px;display:block;letter-spacing:1px}
+.day-tab .tab-sub{display:block;margin-top:1px;font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}
 
 /* PANELS — weniger padding oben/unten */
 .panel{display:none;padding:10px 12px 120px}
@@ -203,7 +203,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 
 <!-- ══ WORKOUT ══ -->
 <div class="view active" id="viewWorkout">
-  <div class="day-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr">
+  <div class="day-tabs">
     <button class="day-tab" id="tabMon" onclick="switchDay('mon')">
       <span class="tab-label">MO</span><span class="tab-sub" id="subtextMon"></span>
     </button>
