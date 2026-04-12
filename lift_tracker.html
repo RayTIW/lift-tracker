@@ -33,6 +33,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .day-tab.active-mon{color:var(--accent-mon);border-bottom-color:var(--accent-mon)}
 .day-tab.active-wed{color:var(--accent-wed);border-bottom-color:var(--accent-wed)}
 .day-tab.active-fri{color:var(--accent-fri);border-bottom-color:var(--accent-fri)}
+.day-tab.active-ext{color:#c084fc;border-bottom-color:#c084fc}
 .day-tab .tab-label{font-family:'Bebas Neue',sans-serif;font-size:26px;display:block;letter-spacing:2px}
 .day-tab .tab-sub{display:block;margin-top:1px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
 
@@ -176,6 +177,16 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .chevron.open{transform:rotate(90deg)}
 
 /* TOAST */
+.ext-editor{margin-bottom:4px}
+.ext-add-row{display:flex;gap:6px;align-items:center}
+.ext-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;padding:9px 10px;flex:1;-webkit-appearance:none;appearance:none}
+.ext-select:focus{outline:none;border-color:var(--border2)}
+.ext-input{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:14px;padding:9px 10px;flex:1}
+.ext-input:focus{outline:none;border-color:var(--border2)}
+.ext-add-btn{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:9px 14px;cursor:pointer;white-space:nowrap;font-weight:600}
+.ext-add-btn:active{background:var(--border2)}
+.ext-ex-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ext-ex-tag{display:flex;align-items:center;background:var(--surface2);border:1px solid #c084fc44;border-radius:20px;padding:5px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;color:var(--text)}
 .toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--text);color:var(--bg);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:10px 20px;border-radius:6px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -192,7 +203,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 
 <!-- ══ WORKOUT ══ -->
 <div class="view active" id="viewWorkout">
-  <div class="day-tabs">
+  <div class="day-tabs" style="grid-template-columns:1fr 1fr 1fr 1fr">
     <button class="day-tab" id="tabMon" onclick="switchDay('mon')">
       <span class="tab-label">MO</span><span class="tab-sub" id="subtextMon"></span>
     </button>
@@ -202,10 +213,14 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <button class="day-tab" id="tabFri" onclick="switchDay('fri')">
       <span class="tab-label">FR</span><span class="tab-sub" id="subtextFri"></span>
     </button>
+    <button class="day-tab" id="tabExt" onclick="switchDay('ext')">
+      <span class="tab-label">+</span><span class="tab-sub" id="subtextExt">Zusatz</span>
+    </button>
   </div>
   <div class="panel" id="panelMon"></div>
   <div class="panel" id="panelWed"></div>
   <div class="panel" id="panelFri"></div>
+  <div class="panel" id="panelExt"></div>
 </div>
 
 <!-- ══ PROGRESS ══ -->
@@ -232,6 +247,8 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 
     <div class="settings-title">TRAININGSTAGE</div>
     <div id="dayCfgContainer"></div>
+    <div class="settings-title" style="margin-top:20px">ÜBUNGS-POOL (Zusatztag)</div>
+    <div id="poolCfgContainer"></div>
 
     <button class="save-settings-btn" id="saveSettingsBtn" onclick="saveSettings()">EINSTELLUNGEN SPEICHERN</button>
   </div>
@@ -257,8 +274,12 @@ const DEFAULT_STATE = {
     mon: [{ name:'Bench Press', intensity:'light' }, { name:'Squat', intensity:'heavy' }],
     wed: [{ name:'Bench Press', intensity:'medium' }, { name:'Deadlift', intensity:'heavy' }],
     fri: [{ name:'Bench Press', intensity:'heavy' }, { name:'Squat', intensity:'medium' }],
+    ext: [],
   },
+  // Pool of exercise suggestions for the ext day (editable in settings)
+  exercisePool: ['Squat','Bench Press','Deadlift','OHP','Romanian DL','Barbell Row','Close Grip Bench','Pause Squat','Pause Bench','Pin Press','Deficit DL'],
   assistExercises: {
+    ext: [],
     mon: [
       { name:'OHP',           scheme:'3×8',   sets:3, kg:50 },
       { name:'Romanian DL',   scheme:'3×8',   sets:3, kg:80 },
@@ -296,6 +317,7 @@ function loadState() {
         assistExercises: p.assistExercises || DEFAULT_STATE.assistExercises,
         sets: p.sets || DEFAULT_STATE.sets,
         assistSets: p.assistSets || {},
+        exercisePool: p.exercisePool || DEFAULT_STATE.exercisePool,
         rpe: p.rpe || DEFAULT_STATE.rpe,
         assistDone: p.assistDone || {},
         notes: p.notes || {},
@@ -355,6 +377,43 @@ function renderPanel(day) {
   const mainExes = state.dayExercises[day] || [];
   const assistExes = state.assistExercises[day] || [];
   let html = '';
+
+  // ── Ext day: live exercise editor ──
+  if (day === 'ext') {
+    const pool = state.exercisePool || [];
+    const poolOpts = pool.map(n => `<option value="${n}">${n}</option>`).join('');
+    const intMap = {heavy:'S',medium:'M',light:'L'};
+    const extTagsHtml = mainExes.length
+      ? '<div class="ext-ex-list">' + mainExes.map((ex,ei) =>
+          '<div class="ext-ex-tag">'
+          + '<span>' + ex.name + '</span>'
+          + '<span class="intensity-badge badge-' + ex.intensity + '" style="margin:0 6px">' + (intMap[ex.intensity]||'') + '</span>'
+          + '<button onclick="extRemoveEx(' + ei + ')" style="background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;padding:0 2px">×</button>'
+          + '</div>'
+        ).join('') + '</div>'
+      : '';
+    html += `
+    <div class="ext-editor">
+      <div class="section-label" style="margin-top:10px">Übungen für heute</div>
+      <div class="ext-add-row">
+        <select class="ext-select" id="ext-pool-select">
+          <option value="">— aus Liste wählen —</option>
+          ${poolOpts}
+        </select>
+        <button class="ext-add-btn" onclick="extAddFromPool()">+ Wählen</button>
+      </div>
+      <div class="ext-add-row" style="margin-top:6px">
+        <input class="ext-input" id="ext-custom-input" placeholder="Oder eigene Übung..." onkeydown="extCustomKeydown(event)">
+        <select class="cfg-intensity" id="ext-custom-intensity">
+          <option value="heavy">SCHWER</option>
+          <option value="medium" selected>MITTEL</option>
+          <option value="light">LEICHT</option>
+        </select>
+        <button class="ext-add-btn" onclick="extAddCustom()">+ ADD</button>
+      </div>
+      ${extTagsHtml}
+    </div>`;
+  }
 
   // ── Main exercises ──
   html += `<div class="section-label">Hauptübungen</div>`;
@@ -478,12 +537,12 @@ function renderAssistSetRows(k) {
 }
 
 function renderAllPanels() {
-  ['mon','wed','fri'].forEach(d => renderPanel(d));
+  ['mon','wed','fri','ext'].forEach(d => renderPanel(d));
   updateTabSubtexts();
 }
 
 function updateTabSubtexts() {
-  ['mon','wed','fri'].forEach(d => {
+  ['mon','wed','fri','ext'].forEach(d => {
     const exes = state.dayExercises[d] || [];
     const i = {heavy:'S',medium:'M',light:'L'};
     const el = document.getElementById('subtext' + cap(d));
@@ -600,7 +659,7 @@ function adjustAssist(k, delta) {
 let currentDay = 'mon';
 function switchDay(day) {
   currentDay = day;
-  ['mon','wed','fri'].forEach(d => {
+  ['mon','wed','fri','ext'].forEach(d => {
     document.getElementById('panel'+cap(d)).classList.remove('active');
     document.getElementById('tab'+cap(d)).className = 'day-tab';
   });
@@ -613,7 +672,7 @@ function switchDay(day) {
 // SAVE WORKOUT
 // ══════════════════════════════════════════════════════════
 function saveWorkout(day) {
-  const dayNames = {mon:'Montag',wed:'Mittwoch',fri:'Freitag'};
+  const dayNames = {mon:'Montag',wed:'Mittwoch',fri:'Freitag',ext:'Zusatz'};
   const mainExes = state.dayExercises[day] || [];
   const assistExes = state.assistExercises[day] || [];
   const notesEl = document.getElementById('notes-' + day);
@@ -913,7 +972,7 @@ function exportExcel() {
 function renderORMCard() {
   const ormCard = document.getElementById('ormCard');
   const names = new Set(['Squat','Bench Press','Deadlift']);
-  ['mon','wed','fri'].forEach(d => (state.dayExercises[d]||[]).forEach(ex=>names.add(ex.name)));
+  ['mon','wed','fri','ext'].forEach(d => (state.dayExercises[d]||[]).forEach(ex=>names.add(ex.name)));
 
   ormCard.innerHTML = [...names].map(name => {
     const val = state.oneRM[name] || '';
@@ -932,10 +991,11 @@ function renderORMCard() {
 
 function renderSettings() {
   renderORMCard();
+  setTimeout(renderPoolConfig, 0);
   const container = document.getElementById('dayCfgContainer');
-  const days = ['mon','wed','fri'];
-  const dayNames = {mon:'MONTAG',wed:'MITTWOCH',fri:'FREITAG'};
-  const accentColor = {mon:'var(--accent-mon)',wed:'var(--accent-wed)',fri:'var(--accent-fri)'};
+  const days = ['mon','wed','fri','ext'];
+  const dayNames = {mon:'MONTAG',wed:'MITTWOCH',fri:'FREITAG',ext:'ZUSATZTAG'};
+  const accentColor = {mon:'var(--accent-mon)',wed:'var(--accent-wed)',fri:'var(--accent-fri)',ext:'#c084fc'};
 
   container.innerHTML = days.map(d => {
     const exes = state.dayExercises[d]||[];
@@ -1036,6 +1096,61 @@ function removeAssistEx(day, ei) {
   if (state.assistExercises[day]) { state.assistExercises[day].splice(ei,1); renderSettings(); }
 }
 
+// ══════════════════════════════════════════════════════════
+// EXT DAY FUNCTIONS
+// ══════════════════════════════════════════════════════════
+function extAddFromPool() {
+  const sel = document.getElementById('ext-pool-select');
+  const name = sel ? sel.value : '';
+  if (!name) return;
+  const intensity = 'medium';
+  if (!state.dayExercises.ext) state.dayExercises.ext = [];
+  state.dayExercises.ext.push({name, intensity});
+  persist();
+  renderPanel('ext');
+  switchDay('ext');
+  updateTabSubtexts();
+}
+
+function extCustomKeydown(e) { if(e.key==='Enter') extAddCustom(); }
+function extAddCustom() {
+  const inp = document.getElementById('ext-custom-input');
+  const intSel = document.getElementById('ext-custom-intensity');
+  const name = inp ? inp.value.trim() : '';
+  if (!name) return;
+  const intensity = intSel ? intSel.value : 'medium';
+  if (!state.dayExercises.ext) state.dayExercises.ext = [];
+  state.dayExercises.ext.push({name, intensity});
+  if (inp) inp.value = '';
+  persist();
+  renderPanel('ext');
+  switchDay('ext');
+  updateTabSubtexts();
+}
+
+function extRemoveEx(ei) {
+  if (!state.dayExercises.ext) return;
+  state.dayExercises.ext.splice(ei, 1);
+  // also remove the set data
+  const k = mainKey('ext', ei);
+  delete state.sets[k];
+  persist();
+  renderPanel('ext');
+  switchDay('ext');
+  updateTabSubtexts();
+}
+
+function extClearAll() {
+  state.dayExercises.ext = [];
+  state.assistExercises.ext = [];
+  Object.keys(state.sets).forEach(k => { if(k.startsWith('ext-')) delete state.sets[k]; });
+  Object.keys(state.assistSets).forEach(k => { if(k.startsWith('ext-')) delete state.assistSets[k]; });
+  persist();
+  renderPanel('ext');
+  switchDay('ext');
+  updateTabSubtexts();
+}
+
 function updateORM(input) {
   const name = input.dataset.exercise;
   const val = parseFloat(input.value) || 0;
@@ -1043,6 +1158,40 @@ function updateORM(input) {
   const safeId = name ? name.replace(/ /g,'-') : '';
   const infoEl = document.getElementById('orm-info-' + safeId);
   if (infoEl) infoEl.textContent = val ? '→ 90%: ' + (Math.round(val*0.9*2)/2) + 'kg' : '';
+}
+
+function renderPoolConfig() {
+  const container = document.getElementById('poolCfgContainer');
+  if (!container) return;
+  const pool = state.exercisePool || [];
+  const poolRows = pool.map((name, i) =>
+    '<div class="assist-cfg-row">'
+    + '<span class="assist-cfg-name">' + name + '</span>'
+    + '<button class="assist-cfg-remove" onclick="removeFromPool(' + i + ')">x</button>'
+    + '</div>'
+  ).join('');
+  const emptyMsg = pool.length ? '' : '<div style="font-size:11px;color:var(--text-muted);padding:4px 0">Noch keine Übungen.</div>';
+  container.innerHTML =
+    '<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">'
+    + emptyMsg + poolRows
+    + '<div style="display:flex;gap:6px;margin-top:8px">'
+    + '<input class="cfg-input" id="pool-new-input" placeholder="Übung hinzufügen..." onkeydown="if(event.keyCode===13)addToPool()">'
+    + '<button class="cfg-add-btn" onclick="addToPool()">+ ADD</button>'
+    + '</div></div>';
+}
+
+function addToPool() {
+  const inp = document.getElementById('pool-new-input');
+  const name = inp ? inp.value.trim() : '';
+  if (!name) return;
+  if (!state.exercisePool) state.exercisePool = [];
+  if (!state.exercisePool.includes(name)) state.exercisePool.push(name);
+  if (inp) inp.value = '';
+  renderPoolConfig();
+}
+
+function removeFromPool(i) {
+  if (state.exercisePool) { state.exercisePool.splice(i,1); renderPoolConfig(); }
 }
 
 function saveSettings() {
