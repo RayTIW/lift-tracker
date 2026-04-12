@@ -197,7 +197,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <div class="topbar-title">LIFT</div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
     <div class="topbar-date" id="topbarDate"></div>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.0.4</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.0.5</div>
   </div>
 </div>
 
@@ -250,6 +250,18 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <div class="settings-title" style="margin-top:20px">ÜBUNGS-POOL (Zusatztag)</div>
     <div id="poolCfgContainer"></div>
 
+    <div class="settings-title" style="margin-top:20px">BACKUP &amp; RESTORE</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
+        Exportiert alle Daten: 1RM, Trainingsplan, Übungs-Pool und komplette History.<br>
+        Import liest diese Datei wieder ein und stellt alles wieder her.
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="export-btn" style="margin-bottom:0;flex:1" onclick="exportSettings()">📥 Backup exportieren</button>
+        <button class="export-btn" style="margin-bottom:0;flex:1" onclick="document.getElementById('settingsImportInput').click()">📤 Backup importieren</button>
+      </div>
+      <input type="file" id="settingsImportInput" accept=".xlsx" style="display:none" onchange="importSettings(this)">
+    </div>
     <button class="save-settings-btn" id="saveSettingsBtn" onclick="saveSettings()">EINSTELLUNGEN SPEICHERN</button>
   </div>
 </div>
@@ -1192,6 +1204,215 @@ function addToPool() {
 
 function removeFromPool(i) {
   if (state.exercisePool) { state.exercisePool.splice(i,1); renderPoolConfig(); }
+}
+
+// ══════════════════════════════════════════════════════════
+// SETTINGS BACKUP EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════
+function exportSettings() {
+  const wb = XLSX.utils.book_new();
+
+  // Sheet 1: 1RM
+  const orm = Object.entries(state.oneRM || {});
+  const ws1 = XLSX.utils.aoa_to_sheet([
+    ['Übung', '1RM (kg)'],
+    ...orm.map(([name, kg]) => [name, kg])
+  ]);
+  ws1['!cols'] = [{wch:20},{wch:12}];
+  XLSX.utils.book_append_sheet(wb, ws1, '1RM');
+
+  // Sheet 2: Trainingsplan (Hauptübungen)
+  const planRows = [['Tag', 'Übung', 'Intensität', 'Satz', 'kg', 'Wdh']];
+  const dayLabel = {mon:'Montag', wed:'Mittwoch', fri:'Freitag', ext:'Zusatz'};
+  ['mon','wed','fri','ext'].forEach(d => {
+    (state.dayExercises[d]||[]).forEach((ex, ei) => {
+      const k = mainKey(d, ei);
+      (state.sets[k]||[{kg:'',reps:''}]).forEach((s,si) => {
+        planRows.push([dayLabel[d], ex.name, ex.intensity, si+1, s.kg, s.reps]);
+      });
+    });
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(planRows);
+  ws2['!cols'] = [{wch:12},{wch:20},{wch:10},{wch:6},{wch:8},{wch:6}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Trainingsplan');
+
+  // Sheet 3: Assistenzübungen
+  const assistRows = [['Tag', 'Übung', 'Schema', 'Startgewicht (kg)']];
+  ['mon','wed','fri','ext'].forEach(d => {
+    (state.assistExercises[d]||[]).forEach(ex => {
+      assistRows.push([dayLabel[d], ex.name, ex.scheme, ex.kg||0]);
+    });
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet(assistRows);
+  ws3['!cols'] = [{wch:12},{wch:20},{wch:10},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Assistenz-Plan');
+
+  // Sheet 4: Übungs-Pool
+  const poolRows = [['Übung'], ...(state.exercisePool||[]).map(n => [n])];
+  const ws4 = XLSX.utils.aoa_to_sheet(poolRows);
+  ws4['!cols'] = [{wch:24}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Uebungs-Pool');
+
+  // Sheet 5: Trainings-History (Hauptübungen)
+  const histRows = [['Datum','Tag','Übung','Intensität','Satz','kg','Wdh','Volumen','RPE','e1RM','Notizen']];
+  (state.history||[]).forEach(entry => {
+    (entry.lifts||[]).forEach(lift => {
+      (lift.setsRaw||[{kg:lift.topSet||0,reps:0}]).forEach((s,si) => {
+        histRows.push([
+          entry.dateISO||entry.date, entry.dayName, lift.name, lift.intensity||'',
+          si+1, s.kg, s.reps, s.reps?s.kg*s.reps:'',
+          si===0?lift.rpe:'',
+          si===0?calcE1RM(lift.topSet||s.kg, s.reps||1):'',
+          si===0?(entry.notes||''):''
+        ]);
+      });
+    });
+  });
+  const ws5 = XLSX.utils.aoa_to_sheet(histRows);
+  ws5['!cols'] = [12,10,18,10,6,8,6,10,6,10,30].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws5, 'History-Hauptuebungen');
+
+  // Sheet 6: History Assistenz
+  const histAssist = [['Datum','Tag','Übung','Satz','kg','Wdh','Volumen']];
+  (state.history||[]).forEach(entry => {
+    (entry.assist||[]).forEach(a => {
+      (a.setsRaw||[]).forEach((s,si) => {
+        histAssist.push([entry.dateISO||entry.date, entry.dayName, a.name, si+1, s.kg, s.reps, s.kg*s.reps]);
+      });
+    });
+  });
+  const ws6 = XLSX.utils.aoa_to_sheet(histAssist);
+  ws6['!cols'] = [12,10,18,6,8,6,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws6, 'History-Assistenz');
+
+  const filename = 'LIFT_Backup_' + new Date().toISOString().split('T')[0] + '.xlsx';
+  XLSX.writeFile(wb, filename);
+  showToast('📥 ' + filename);
+}
+
+function importSettings(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array'});
+
+      // ── 1RM ──
+      if (wb.SheetNames.includes('1RM')) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['1RM'], {header:1}).slice(1);
+        rows.forEach(r => { if(r[0] && r[1]!==undefined) state.oneRM[String(r[0])] = parseFloat(r[1])||0; });
+      }
+
+      // ── Trainingsplan ──
+      if (wb.SheetNames.includes('Trainingsplan')) {
+        const dayMap = {'Montag':'mon','Mittwoch':'wed','Freitag':'fri','Zusatz':'ext'};
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Trainingsplan'], {header:1}).slice(1);
+        // Reset exercises
+        const newDayEx = {mon:[],wed:[],fri:[],ext:[]};
+        const newSets = {};
+        rows.forEach(r => {
+          const day = dayMap[String(r[0]||'')];
+          if (!day) return;
+          const name = String(r[1]||'').trim();
+          const intensity = String(r[2]||'medium');
+          const si = (parseInt(r[3])||1) - 1;
+          const kg = parseFloat(r[4])||0;
+          const reps = parseInt(r[5])||3;
+          // find or create exercise entry
+          let ei = newDayEx[day].findIndex(ex => ex.name === name);
+          if (ei < 0) { newDayEx[day].push({name, intensity}); ei = newDayEx[day].length-1; }
+          const k = day + '-' + ei;
+          if (!newSets[k]) newSets[k] = [];
+          newSets[k][si] = {kg, reps, done:false};
+        });
+        // Fill gaps in sets arrays
+        Object.values(newSets).forEach(arr => { for(let i=0;i<arr.length;i++) if(!arr[i]) arr[i]={kg:0,reps:3,done:false}; });
+        state.dayExercises = newDayEx;
+        // Merge sets — keep existing if not in file
+        Object.assign(state.sets, newSets);
+      }
+
+      // ── Assistenz-Plan ──
+      if (wb.SheetNames.includes('Assistenz-Plan')) {
+        const dayMap = {'Montag':'mon','Mittwoch':'wed','Freitag':'fri','Zusatz':'ext'};
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Assistenz-Plan'], {header:1}).slice(1);
+        const newAssist = {mon:[],wed:[],fri:[],ext:[]};
+        rows.forEach(r => {
+          const day = dayMap[String(r[0]||'')];
+          if (!day) return;
+          const name = String(r[1]||'').trim();
+          const scheme = String(r[2]||'3×8');
+          const kg = parseFloat(r[3])||0;
+          const m = scheme.match(/^(\d+)/);
+          const sets = m ? parseInt(m[1]) : 3;
+          newAssist[day].push({name, scheme, sets, kg});
+        });
+        state.assistExercises = newAssist;
+        state.assistSets = {}; // reset so they get regenerated from new plan
+      }
+
+      // ── Übungs-Pool ──
+      if (wb.SheetNames.includes('Uebungs-Pool')) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Uebungs-Pool'], {header:1}).slice(1);
+        state.exercisePool = rows.map(r => String(r[0]||'').trim()).filter(Boolean);
+      }
+
+      // ── History (merge, no duplicates) ──
+      ['History-Hauptuebungen'].forEach(shName => {
+        if (!wb.SheetNames.includes(shName)) return;
+        // Re-use existing importExcel logic for history sheet named differently
+        const ws = wb.Sheets[shName];
+        const rows = XLSX.utils.sheet_to_json(ws, {header:1});
+        if (rows.length < 2) return;
+        const header = rows[0].map(h => String(h||'').trim());
+        const iDate=header.indexOf('Datum'), iDay=header.indexOf('Tag'), iExer=header.indexOf('Übung'),
+              iInt=header.indexOf('Intensität'), iSatz=header.indexOf('Satz'), iKg=header.indexOf('kg'),
+              iWdh=header.indexOf('Wdh'), iRPE=header.indexOf('RPE'), iNote=header.indexOf('Notizen');
+        const entriesMap = {};
+        rows.slice(1).forEach(row => {
+          let dateStr = String(row[iDate]||'').trim();
+          if (!isNaN(row[iDate]) && typeof row[iDate]==='number') {
+            dateStr = new Date(Math.round((row[iDate]-25569)*86400*1000)).toISOString().split('T')[0];
+          }
+          const dayName = iDay>=0?String(row[iDay]||''):'';
+          const mk = dateStr+'|'+dayName;
+          if (!entriesMap[mk]) {
+            const dayCode = dayName.includes('Montag')?'mon':dayName.includes('Mittwoch')?'wed':dayName.includes('Freitag')?'fri':'ext';
+            entriesMap[mk] = {date:dateStr, dateISO:dateStr, day:dayCode, dayName, liftsMap:{}, notes:iNote>=0&&row[iNote]?String(row[iNote]):'', assist:[]};
+          }
+          const entry = entriesMap[mk];
+          const exName = iExer>=0?String(row[iExer]||''):'';
+          const si = iSatz>=0?(parseInt(row[iSatz])||1)-1:0;
+          const kg = iKg>=0?parseFloat(row[iKg])||0:0;
+          const reps = iWdh>=0?parseInt(row[iWdh])||0:0;
+          const rpe = iRPE>=0?parseFloat(row[iRPE])||7:7;
+          const inten = iInt>=0?String(row[iInt]||''):'';
+          if (!exName) return;
+          if (!entry.liftsMap[exName]) entry.liftsMap[exName]={name:exName,intensity:inten,setsRaw:[],rpe,topSet:0,totalVol:0};
+          const lift = entry.liftsMap[exName];
+          lift.setsRaw[si]={kg,reps};
+          if(kg>lift.topSet) lift.topSet=kg;
+          lift.totalVol+=kg*reps;
+          if(si===0) lift.rpe=rpe;
+        });
+        const imported = Object.values(entriesMap).map(e=>({...e, lifts:Object.values(e.liftsMap).map(l=>({...l, sets:l.setsRaw.map(s=>`${s.kg}×${s.reps}`).join(', ')}))}));
+        const existingKeys = new Set((state.history||[]).map(e=>e.dateISO+'|'+e.dayName));
+        const newEntries = imported.filter(e=>!existingKeys.has(e.dateISO+'|'+e.dayName));
+        state.history = [...(state.history||[]), ...newEntries].sort((a,b)=>(b.dateISO||b.date)>(a.dateISO||a.date)?1:-1);
+      });
+
+      persist();
+      renderAllPanels();
+      renderSettings();
+      showToast('✅ Backup importiert!');
+    } catch(err) {
+      console.error(err);
+      showToast('❌ Import fehlgeschlagen: ' + err.message);
+    }
+    input.value = '';
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 function saveSettings() {
