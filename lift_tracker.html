@@ -438,9 +438,20 @@ function renderPanel(day) {
           + '</div>'
         ).join('') + '</div>'
       : '';
+    const histOpts = (state.history||[]).slice(0,30).map((e,i) =>
+      '<option value="'+i+'">'+e.date+' — '+e.dayName+' ('+((e.lifts||[]).map(l=>l.name).join(', ')|| '?')+')</option>'
+    ).join('');
     html += `
     <div class="ext-editor">
-      <div class="section-label" style="margin-top:10px">Übungen für heute</div>
+      <div class="section-label" style="margin-top:10px">Aus History laden</div>
+      <div class="ext-add-row">
+        <select class="ext-select" id="ext-history-select">
+          <option value="">— Training aus History wählen —</option>
+          ${histOpts}
+        </select>
+        <button class="ext-add-btn" onclick="extLoadFromHistory()">↩ Laden</button>
+      </div>
+      <div class="section-label" style="margin-top:14px">Übungen für heute</div>
       <div class="ext-add-row">
         <select class="ext-select" id="ext-pool-select">
           <option value="">— aus Liste wählen —</option>
@@ -1268,6 +1279,53 @@ function removeAssistEx(day, ei) {
 // ══════════════════════════════════════════════════════════
 // EXT DAY FUNCTIONS
 // ══════════════════════════════════════════════════════════
+function extLoadFromHistory() {
+  const sel = document.getElementById('ext-history-select');
+  const idx = sel ? parseInt(sel.value) : NaN;
+  if (isNaN(idx)) return;
+  const entry = (state.history||[])[idx];
+  if (!entry) return;
+
+  // Clear current ext day
+  state.dayExercises.ext = [];
+  state.assistExercises.ext = [];
+  Object.keys(state.sets).forEach(k => { if(k.startsWith('ext-')) delete state.sets[k]; });
+  Object.keys(state.assistSets).forEach(k => { if(k.startsWith('ext-a')) delete state.assistSets[k]; });
+  Object.keys(state.rpe).forEach(k => { if(k.startsWith('ext-')) delete state.rpe[k]; });
+
+  // Load main lifts from history entry
+  (entry.lifts||[]).forEach((lift, ei) => {
+    state.dayExercises.ext.push({ name: lift.name, intensity: lift.intensity || 'medium' });
+    const k = mainKey('ext', ei);
+    // Use the saved sets if available, else just top set
+    if (lift.setsRaw && lift.setsRaw.length) {
+      state.sets[k] = lift.setsRaw.map(s => ({ kg: s.kg, reps: s.reps, done: false }));
+    } else {
+      const kg = lift.topSet || 0;
+      state.sets[k] = [{kg, reps:3, done:false}, {kg, reps:3, done:false}, {kg, reps:3, done:false}];
+    }
+    state.rpe[k] = lift.rpe || 7;
+  });
+
+  // Load assist from history entry
+  (entry.assist||[]).filter(a => a.setsRaw && a.setsRaw.length).forEach((a, ei) => {
+    const sets = a.setsRaw.length;
+    // infer kg from first set
+    const kg = a.setsRaw[0] ? a.setsRaw[0].kg : 0;
+    const reps = a.setsRaw[0] ? a.setsRaw[0].reps : 8;
+    const scheme = sets + '×' + reps;
+    state.assistExercises.ext.push({ name: a.name, scheme, sets, kg });
+    const k = assistKey('ext', ei);
+    state.assistSets[k] = a.setsRaw.map(s => ({ kg: s.kg, reps: s.reps, done: false }));
+  });
+
+  persist();
+  renderPanel('ext');
+  switchDay('ext');
+  updateTabSubtexts();
+  showToast('↩ ' + entry.dayName + ' vom ' + entry.date + ' geladen');
+}
+
 function extAddFromPool() {
   const sel = document.getElementById('ext-pool-select');
   const name = sel ? sel.value : '';
