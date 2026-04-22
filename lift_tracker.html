@@ -1218,11 +1218,13 @@ function renderSettings() {
         <div class="cfg-sub">Assistenzübungen</div>
         <div id="cfg-assist-list-${d}">${assistRows}</div>
         <div class="assist-input-wrap">
-          <input class="assist-input-name" id="cfg-assist-name-${d}" placeholder="Übung..."
+          <input class="assist-input-name" id="cfg-assist-name-${d}" placeholder="Übungsname..."
             onkeydown="if(event.key==='Enter')addAssistEx('${d}')">
-          <input class="assist-input-scheme" id="cfg-assist-scheme-${d}" placeholder="3×8" value="3×8">
-          <input class="assist-input-kg" id="cfg-assist-kg-${d}" placeholder="kg" type="number" inputmode="decimal" step="2.5" min="0">
-          <button class="cfg-add-btn" onclick="addAssistEx('${d}')">+ ADD</button>
+          <input class="assist-input-scheme" id="cfg-assist-scheme-${d}" placeholder="3×8" value="3×8" style="width:56px">
+        </div>
+        <div class="assist-input-wrap" style="margin-top:5px">
+          <input class="assist-input-kg" id="cfg-assist-kg-${d}" placeholder="Startgewicht kg" type="number" inputmode="decimal" step="2.5" min="0" style="flex:1">
+          <button class="cfg-add-btn" style="flex-shrink:0" onclick="addAssistEx('${d}')">+ ADD</button>
         </div>
       </div>
     </div>`;
