@@ -1640,19 +1640,26 @@ function exportSettings() {
   const histRows = [['Datum','Tag','Übung','Intensität','Satz','kg','Wdh','Volumen','RPE','e1RM','Notizen','KG','Squat 1RM','Bench 1RM','DL 1RM','SBD Total','DOTS']];
   (state.history||[]).forEach(entry => {
     (entry.lifts||[]).forEach(lift => {
+      const snap = entry.snapshot || {};
       (lift.setsRaw||[{kg:lift.topSet||0,reps:0}]).forEach((s,si) => {
         histRows.push([
           entry.dateISO||entry.date, entry.dayName, lift.name, lift.intensity||'',
           si+1, s.kg, s.reps, s.reps?s.kg*s.reps:'',
           si===0?lift.rpe:'',
           si===0?calcE1RM(lift.topSet||s.kg, s.reps||1):'',
-          si===0?(entry.notes||''):''
+          si===0?(entry.notes||''):'',
+          si===0?(snap.bodyweight||''):'',
+          si===0?(snap.squat||''):'',
+          si===0?(snap.bench||''):'',
+          si===0?(snap.deadlift||''):'',
+          si===0?(snap.total||''):'',
+          si===0?(snap.dots||''):''
         ]);
       });
     });
   });
   const ws5 = XLSX.utils.aoa_to_sheet(histRows);
-  ws5['!cols'] = [12,10,18,10,6,8,6,10,6,10,30].map(w=>({wch:w}));
+  ws5['!cols'] = [12,10,18,10,6,8,6,10,6,10,30,8,12,10,10,12,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws5, 'History-Hauptuebungen');
 
   // Sheet 6: History Assistenz
