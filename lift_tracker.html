@@ -96,7 +96,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .save-btn.saved{background:var(--green)}
 
 /* BOTTOM NAV — etwas höher */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,.97);border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr;z-index:200}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,.97);border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 1fr 1fr;z-index:200}
 .nav-btn{background:none;border:none;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:10px 4px 14px;cursor:pointer;text-align:center;transition:color .1s}
 .nav-btn.active{color:var(--text)}
 .nav-icon{font-size:22px;display:block;margin-bottom:2px}
@@ -213,6 +213,31 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .dots-val-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;text-align:center}
 .dots-val-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
 .dots-val-num{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1}
+.tools-wrap{padding:12px 12px 100px}
+.tools-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.tools-desc{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);line-height:1.7;margin-bottom:16px}
+.tools-input-row{display:flex;gap:12px}
+.tools-input-group{flex:1;display:flex;flex-direction:column;gap:6px}
+.tools-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase}
+.tools-input{background:var(--surface2);border:2px solid var(--border);border-radius:6px;padding:12px 8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:600;text-align:center;width:100%;-webkit-appearance:none;appearance:none}
+.tools-input:focus{outline:none;border-color:var(--border2)}
+.tools-unit{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--text-muted)}
+.tools-result{text-align:center;padding:20px 0 10px;border-top:1px solid var(--border);margin-top:16px}
+.tools-result-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.tools-result-val{font-family:'Bebas Neue',sans-serif;font-size:64px;line-height:1;color:var(--text)}
+.tools-result-sub{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);margin-top:6px}
+.tools-formula-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tools-formula-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;text-align:center}
+.tools-formula-name{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;margin-bottom:4px}
+.tools-formula-val{font-family:'Bebas Neue',sans-serif;font-size:28px;line-height:1}
+.tools-formula-best{border-color:#c084fc44;background:rgba(192,132,252,0.06)}
+.tools-pct-table{background:var(--surface2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.tools-pct-row{display:grid;grid-template-columns:60px 1fr 1fr;padding:9px 14px;border-bottom:1px solid var(--border);align-items:center}
+.tools-pct-row:last-child{border-bottom:none}
+.tools-pct-row.header{background:var(--surface);font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+.tools-pct-pct{font-family:'Bebas Neue',sans-serif;font-size:20px}
+.tools-pct-kg{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600}
+.tools-pct-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted)}
 .toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--text);color:var(--bg);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:10px 20px;border-radius:6px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -223,7 +248,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <div class="topbar-title">LIFT</div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
     <div class="topbar-date" id="topbarDate"></div>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.0.6</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.0.7</div>
   </div>
 </div>
 
@@ -307,9 +332,64 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <div class="detail-body" id="detailBody"></div>
 </div>
 
+<!-- ══ TOOLS VIEW ══ -->
+<div class="view" id="viewTools">
+  <div class="tools-wrap">
+
+    <div class="settings-title">1RM RECHNER</div>
+    <div class="tools-card">
+      <div class="tools-desc">Gib dein Trainingsgewicht und die Wiederholungen ein — die App berechnet das geschätzte 1RM nach mehreren Formeln.</div>
+      <div class="tools-input-row">
+        <div class="tools-input-group">
+          <label class="tools-label">GEWICHT</label>
+          <div style="display:flex;align-items:center;gap:6px">
+            <input class="tools-input" id="calc-kg" type="number" inputmode="decimal" step="2.5" min="0" value="100" oninput="calcOneRM()">
+            <span class="tools-unit">kg</span>
+          </div>
+          <div class="weight-adjust" style="margin-top:6px">
+            <button class="adj-btn" onclick="adjCalc('kg',-5)">−5</button>
+            <button class="adj-btn" onclick="adjCalc('kg',-2.5)">−2.5</button>
+            <button class="adj-btn" onclick="adjCalc('kg',2.5)">+2.5</button>
+            <button class="adj-btn" onclick="adjCalc('kg',5)">+5</button>
+          </div>
+        </div>
+        <div class="tools-input-group">
+          <label class="tools-label">WDHL.</label>
+          <input class="tools-input" id="calc-reps" type="number" inputmode="numeric" min="1" max="30" value="5" oninput="calcOneRM()">
+          <div class="weight-adjust" style="margin-top:6px">
+            <button class="adj-btn" onclick="adjCalc('reps',-1)">−1</button>
+            <button class="adj-btn" onclick="adjCalc('reps',1)">+1</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result big display -->
+      <div class="tools-result" id="calc-result-main" style="display:none">
+        <div class="tools-result-label">Geschätztes 1RM</div>
+        <div class="tools-result-val" id="calc-1rm-val">—</div>
+        <div class="tools-result-sub" id="calc-1rm-sub"></div>
+      </div>
+
+      <!-- Formula breakdown -->
+      <div id="calc-formulas" style="display:none">
+        <div class="section-label" style="margin-top:16px">Formeln im Vergleich</div>
+        <div class="tools-formula-grid" id="calc-formula-grid"></div>
+      </div>
+
+      <!-- Percentage table -->
+      <div id="calc-pct-section" style="display:none">
+        <div class="section-label" style="margin-top:16px">Trainingsgewichte</div>
+        <div class="tools-pct-table" id="calc-pct-table"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <div class="bottom-nav">
   <button class="nav-btn active" id="navWorkout" onclick="showView('workout')"><span class="nav-icon">🏋️</span>TRAINING</button>
   <button class="nav-btn" id="navProgress" onclick="showView('progress')"><span class="nav-icon">📈</span>VERLAUF</button>
+  <button class="nav-btn" id="navTools" onclick="showView('tools')"><span class="nav-icon">🔧</span>TOOLS</button>
   <button class="nav-btn" id="navSettings" onclick="showView('settings')"><span class="nav-icon">⚙️</span>EINSTELLUNGEN</button>
 </div>
 <div class="toast" id="toast"></div>
@@ -1733,6 +1813,92 @@ function saveSettings() {
 // ══════════════════════════════════════════════════════════
 // VIEW SWITCHING
 // ══════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════
+// TOOLS — 1RM RECHNER
+// ══════════════════════════════════════════════════════════
+function round25(v) { return Math.round(v / 2.5) * 2.5; }
+
+function adjCalc(field, delta) {
+  const el = document.getElementById('calc-' + field);
+  if (!el) return;
+  let val = parseFloat(el.value) || 0;
+  if (field === 'kg') val = Math.max(0, Math.round((val + delta) * 2) / 2);
+  if (field === 'reps') val = Math.max(1, Math.min(30, val + delta));
+  el.value = val;
+  calcOneRM();
+}
+
+function calcOneRM() {
+  const kg   = parseFloat(document.getElementById('calc-kg').value)   || 0;
+  const reps = parseInt(document.getElementById('calc-reps').value)    || 0;
+  const resultMain   = document.getElementById('calc-result-main');
+  const formulasSec  = document.getElementById('calc-formulas');
+  const pctSec       = document.getElementById('calc-pct-section');
+
+  if (!kg || !reps || reps < 1) {
+    resultMain.style.display  = 'none';
+    formulasSec.style.display = 'none';
+    pctSec.style.display      = 'none';
+    return;
+  }
+
+  // ── Formulas ──
+  const formulas = [
+    { name: 'Epley',     val: reps===1 ? kg : Math.round(kg * (1 + reps/30) * 10)/10 },
+    { name: 'Brzycki',   val: reps===1 ? kg : Math.round(kg * (36/(37-reps)) * 10)/10 },
+    { name: 'Lander',    val: reps===1 ? kg : Math.round(kg / (1.013 - 0.0267123*reps) * 10)/10 },
+    { name: 'Lombardi',  val: reps===1 ? kg : Math.round(kg * Math.pow(reps, 0.10) * 10)/10 },
+  ];
+
+  // Average as main result
+  const avg = Math.round(formulas.reduce((a,f)=>a+f.val,0)/formulas.length * 10)/10;
+
+  // Best formula = closest to average
+  const best = formulas.reduce((b,f) => Math.abs(f.val-avg) < Math.abs(b.val-avg) ? f : b);
+
+  document.getElementById('calc-1rm-val').textContent = avg + ' kg';
+  document.getElementById('calc-1rm-sub').textContent =
+    'Durchschnitt aus ' + formulas.length + ' Formeln · ' + reps + ' Wdh × ' + kg + ' kg';
+  resultMain.style.display  = 'block';
+
+  // Formula breakdown
+  const grid = document.getElementById('calc-formula-grid');
+  grid.innerHTML = formulas.map(f =>
+    '<div class="tools-formula-box' + (f.name===best.name?' tools-formula-best':'') + '">'
+    + '<div class="tools-formula-name">' + f.name + (f.name===best.name?' ★':'') + '</div>'
+    + '<div class="tools-formula-val">' + f.val + ' kg</div>'
+    + '</div>'
+  ).join('');
+  formulasSec.style.display = 'block';
+
+  // Percentage table
+  const pcts = [
+    { pct:100, label:'1RM Max' },
+    { pct:95,  label:'Schwer (1-2 Wdh)' },
+    { pct:90,  label:'Schwer (2-3 Wdh)' },
+    { pct:87,  label:'Schwer (3-4 Wdh)' },
+    { pct:85,  label:'Mittel (4-5 Wdh)' },
+    { pct:80,  label:'Mittel (5-6 Wdh)' },
+    { pct:75,  label:'Mittel (6-8 Wdh)' },
+    { pct:70,  label:'Leicht (8-10 Wdh)' },
+    { pct:65,  label:'Leicht (10-12 Wdh)' },
+    { pct:60,  label:'Volumen (12-15 Wdh)' },
+  ];
+  const table = document.getElementById('calc-pct-table');
+  table.innerHTML =
+    '<div class="tools-pct-row header"><div>%</div><div>kg</div><div>Intensität</div></div>'
+    + pcts.map(p => {
+        const kgVal = round25(avg * p.pct / 100);
+        const isInput = p.pct === Math.round(kg/avg*100);
+        return '<div class="tools-pct-row" style="' + (isInput?'background:rgba(192,132,252,0.08)':'')+'">'
+          + '<div class="tools-pct-pct">' + p.pct + '%</div>'
+          + '<div class="tools-pct-kg">' + kgVal + '</div>'
+          + '<div class="tools-pct-label">' + p.label + '</div>'
+          + '</div>';
+      }).join('');
+  pctSec.style.display = 'block';
+}
+
 function showView(v) {
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
@@ -1740,6 +1906,7 @@ function showView(v) {
   document.getElementById('nav'+cap(v)).classList.add('active');
   if (v==='progress') renderProgress();
   if (v==='settings') renderSettings();
+  if (v==='tools') calcOneRM();
   window.scrollTo(0,0);
 }
 
