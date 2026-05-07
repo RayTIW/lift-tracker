@@ -238,6 +238,12 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .tools-pct-pct{font-family:'Bebas Neue',sans-serif;font-size:20px}
 .tools-pct-kg{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600}
 .tools-pct-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted)}
+.import-check-row{margin-bottom:8px}
+.import-check-label{font-family:'IBM Plex Sans',sans-serif;font-size:14px;color:var(--text);display:flex;align-items:flex-start;gap:8px;cursor:pointer}
+.import-check-label input[type=checkbox]{width:18px;height:18px;margin-top:1px;accent-color:#c084fc;flex-shrink:0;cursor:pointer}
+.import-day-checks{display:flex;gap:10px;margin-top:6px;margin-left:26px;flex-wrap:wrap}
+.import-day-label{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;cursor:pointer}
+.import-day-label input[type=checkbox]{width:16px;height:16px;accent-color:#c084fc;cursor:pointer}
 .toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--text);color:var(--bg);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:10px 20px;border-radius:6px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -307,14 +313,35 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
     <div class="settings-title" style="margin-top:20px">BACKUP &amp; RESTORE</div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px">
       <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:12px;line-height:1.6">
-        Exportiert alle Daten: 1RM, Trainingsplan, Übungs-Pool und komplette History.<br>
-        Import liest diese Datei wieder ein und stellt alles wieder her.
+        Exportiert alle Daten: 1RM, Körpergewicht, Trainingsplan (inkl. Zusatztag), Übungs-Pool und komplette History.
       </div>
-      <div style="display:flex;gap:8px">
-        <button class="export-btn" style="margin-bottom:0;flex:1" onclick="exportSettings()">📥 Backup exportieren</button>
-        <button class="export-btn" style="margin-bottom:0;flex:1" onclick="document.getElementById('settingsImportInput').click()">📤 Backup importieren</button>
+      <button class="export-btn" style="margin-bottom:12px" onclick="exportSettings()">📥 Backup exportieren</button>
+
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:10px;padding-top:10px;border-top:1px solid var(--border)">
+        Beim Import auswählen was importiert werden soll:
       </div>
-      <input type="file" id="settingsImportInput" accept=".xlsx" style="display:none" onchange="importSettings(this)">
+      <div id="importSelectUI">
+        <div class="import-check-row">
+          <label class="import-check-label"><input type="checkbox" id="imp-orm" checked> 1RM &amp; Körpergewicht</label>
+        </div>
+        <div class="import-check-row">
+          <label class="import-check-label"><input type="checkbox" id="imp-pool" checked> Übungs-Pool</label>
+        </div>
+        <div class="import-check-row">
+          <label class="import-check-label"><input type="checkbox" id="imp-plan" checked> Trainingsplan</label>
+          <div class="import-day-checks" id="imp-plan-days">
+            <label class="import-day-label"><input type="checkbox" id="imp-day-mon" checked> Mo</label>
+            <label class="import-day-label"><input type="checkbox" id="imp-day-wed" checked> Mi</label>
+            <label class="import-day-label"><input type="checkbox" id="imp-day-fri" checked> Fr</label>
+            <label class="import-day-label"><input type="checkbox" id="imp-day-ext" checked> Zusatz</label>
+          </div>
+        </div>
+        <div class="import-check-row">
+          <label class="import-check-label"><input type="checkbox" id="imp-history" checked> History (Haupt- &amp; Assistenzübungen)</label>
+        </div>
+        <button class="export-btn" style="margin-top:10px;margin-bottom:0" onclick="document.getElementById('settingsImportInput').click()">📤 Backup importieren</button>
+        <input type="file" id="settingsImportInput" accept=".xlsx" style="display:none" onchange="importSettings(this)">
+      </div>
     </div>
     <button class="save-settings-btn" id="saveSettingsBtn" onclick="saveSettings()">EINSTELLUNGEN SPEICHERN</button>
   </div>
@@ -1683,54 +1710,86 @@ function exportSettings() {
 function importSettings(input) {
   const file = input.files[0];
   if (!file) return;
+
+  const doORM     = document.getElementById('imp-orm')?.checked !== false;
+  const doPool    = document.getElementById('imp-pool')?.checked !== false;
+  const doPlan    = document.getElementById('imp-plan')?.checked !== false;
+  const doHistory = document.getElementById('imp-history')?.checked !== false;
+  const dayMap    = {'Montag':'mon','Mittwoch':'wed','Freitag':'fri','Zusatz':'ext'};
+  const doDays    = {
+    mon: document.getElementById('imp-day-mon')?.checked !== false,
+    wed: document.getElementById('imp-day-wed')?.checked !== false,
+    fri: document.getElementById('imp-day-fri')?.checked !== false,
+    ext: document.getElementById('imp-day-ext')?.checked !== false,
+  };
+
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
       const wb = XLSX.read(e.target.result, {type:'array'});
 
-      // ── 1RM ──
-      if (wb.SheetNames.includes('1RM')) {
+      // ── 1RM + Körpergewicht ──
+      if (doORM && wb.SheetNames.includes('1RM')) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['1RM'], {header:1}).slice(1);
-        rows.forEach(r => { if(r[0] && r[1]!==undefined) state.oneRM[String(r[0])] = parseFloat(r[1])||0; });
+        rows.forEach(r => {
+          const key = String(r[0]||'').trim();
+          if (!key || key === '---') return;
+          if (key === 'Körpergewicht') { state.bodyweight = parseFloat(r[1])||0; return; }
+          if (key === 'SBD Total' || key === 'DOTS') return;
+          if (r[1] !== undefined) state.oneRM[key] = parseFloat(r[1])||0;
+        });
       }
 
-      // ── Trainingsplan ──
-      if (wb.SheetNames.includes('Trainingsplan')) {
-        const dayMap = {'Montag':'mon','Mittwoch':'wed','Freitag':'fri','Zusatz':'ext'};
+      // ── Übungs-Pool ──
+      if (doPool && wb.SheetNames.includes('Uebungs-Pool')) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Uebungs-Pool'], {header:1}).slice(1);
+        state.exercisePool = rows.map(r => String(r[0]||'').trim()).filter(Boolean);
+      }
+
+      // ── Trainingsplan (selektiv nach Tag) ──
+      if (doPlan && wb.SheetNames.includes('Trainingsplan')) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Trainingsplan'], {header:1}).slice(1);
-        // Reset exercises
-        const newDayEx = {mon:[],wed:[],fri:[],ext:[]};
-        const newSets = {};
+        // Only reset selected days
+        const newDayEx = {...state.dayExercises};
+        const newSets  = {...state.sets};
+        // Clear selected days first
+        ['mon','wed','fri','ext'].forEach(d => {
+          if (!doDays[d]) return;
+          newDayEx[d] = [];
+          Object.keys(newSets).forEach(k => { if(k.startsWith(d+'-') && !k.includes('-a')) delete newSets[k]; });
+        });
         rows.forEach(r => {
           const day = dayMap[String(r[0]||'')];
-          if (!day) return;
+          if (!day || !doDays[day]) return;
           const name = String(r[1]||'').trim();
           const intensity = String(r[2]||'medium');
           const si = (parseInt(r[3])||1) - 1;
           const kg = parseFloat(r[4])||0;
           const reps = parseInt(r[5])||3;
-          // find or create exercise entry
           let ei = newDayEx[day].findIndex(ex => ex.name === name);
           if (ei < 0) { newDayEx[day].push({name, intensity}); ei = newDayEx[day].length-1; }
           const k = day + '-' + ei;
           if (!newSets[k]) newSets[k] = [];
           newSets[k][si] = {kg, reps, done:false};
         });
-        // Fill gaps in sets arrays
-        Object.values(newSets).forEach(arr => { for(let i=0;i<arr.length;i++) if(!arr[i]) arr[i]={kg:0,reps:3,done:false}; });
+        Object.values(newSets).forEach(arr => { if(Array.isArray(arr)) for(let i=0;i<arr.length;i++) if(!arr[i]) arr[i]={kg:0,reps:3,done:false}; });
         state.dayExercises = newDayEx;
-        // Merge sets — keep existing if not in file
-        Object.assign(state.sets, newSets);
+        state.sets = newSets;
       }
 
-      // ── Assistenz-Plan ──
-      if (wb.SheetNames.includes('Assistenz-Plan')) {
-        const dayMap = {'Montag':'mon','Mittwoch':'wed','Freitag':'fri','Zusatz':'ext'};
+      // ── Assistenz-Plan (selektiv nach Tag) ──
+      if (doPlan && wb.SheetNames.includes('Assistenz-Plan')) {
         const rows = XLSX.utils.sheet_to_json(wb.Sheets['Assistenz-Plan'], {header:1}).slice(1);
-        const newAssist = {mon:[],wed:[],fri:[],ext:[]};
+        const newAssist = {...state.assistExercises};
+        const newAssistSets = {...state.assistSets};
+        ['mon','wed','fri','ext'].forEach(d => {
+          if (!doDays[d]) return;
+          newAssist[d] = [];
+          Object.keys(newAssistSets).forEach(k => { if(k.startsWith(d+'-a')) delete newAssistSets[k]; });
+        });
         rows.forEach(r => {
           const day = dayMap[String(r[0]||'')];
-          if (!day) return;
+          if (!day || !doDays[day]) return;
           const name = String(r[1]||'').trim();
           const scheme = String(r[2]||'3×8');
           const kg = parseFloat(r[3])||0;
@@ -1739,63 +1798,104 @@ function importSettings(input) {
           newAssist[day].push({name, scheme, sets, kg});
         });
         state.assistExercises = newAssist;
-        state.assistSets = {}; // reset so they get regenerated from new plan
+        state.assistSets = newAssistSets;
       }
 
-      // ── Übungs-Pool ──
-      if (wb.SheetNames.includes('Uebungs-Pool')) {
-        const rows = XLSX.utils.sheet_to_json(wb.Sheets['Uebungs-Pool'], {header:1}).slice(1);
-        state.exercisePool = rows.map(r => String(r[0]||'').trim()).filter(Boolean);
-      }
-
-      // ── History (merge, no duplicates) ──
-      ['History-Hauptuebungen'].forEach(shName => {
-        if (!wb.SheetNames.includes(shName)) return;
-        // Re-use existing importExcel logic for history sheet named differently
-        const ws = wb.Sheets[shName];
+      // ── History (Haupt- + Assistenz, merge no duplicates) ──
+      if (doHistory && wb.SheetNames.includes('History-Hauptuebungen')) {
+        const ws = wb.Sheets['History-Hauptuebungen'];
         const rows = XLSX.utils.sheet_to_json(ws, {header:1});
-        if (rows.length < 2) return;
-        const header = rows[0].map(h => String(h||'').trim());
-        const iDate=header.indexOf('Datum'), iDay=header.indexOf('Tag'), iExer=header.indexOf('Übung'),
-              iInt=header.indexOf('Intensität'), iSatz=header.indexOf('Satz'), iKg=header.indexOf('kg'),
-              iWdh=header.indexOf('Wdh'), iRPE=header.indexOf('RPE'), iNote=header.indexOf('Notizen');
-        const entriesMap = {};
-        rows.slice(1).forEach(row => {
-          let dateStr = String(row[iDate]||'').trim();
-          if (!isNaN(row[iDate]) && typeof row[iDate]==='number') {
-            dateStr = new Date(Math.round((row[iDate]-25569)*86400*1000)).toISOString().split('T')[0];
+        if (rows.length >= 2) {
+          const header = rows[0].map(h => String(h||'').trim());
+          const iDate=header.indexOf('Datum'), iDay=header.indexOf('Tag'), iExer=header.indexOf('Übung'),
+                iInt=header.indexOf('Intensität'), iSatz=header.indexOf('Satz'), iKg=header.indexOf('kg'),
+                iWdh=header.indexOf('Wdh'), iRPE=header.indexOf('RPE'), iNote=header.indexOf('Notizen'),
+                iBodywt=header.indexOf('KG'), iSq=header.indexOf('Squat 1RM'), iBe=header.indexOf('Bench 1RM'),
+                iDl=header.indexOf('DL 1RM'), iTotal=header.indexOf('SBD Total'), iDots=header.indexOf('DOTS');
+          const entriesMap = {};
+          rows.slice(1).forEach(row => {
+            let dateStr = String(row[iDate]||'').trim();
+            if (!isNaN(row[iDate]) && typeof row[iDate]==='number')
+              dateStr = new Date(Math.round((row[iDate]-25569)*86400*1000)).toISOString().split('T')[0];
+            const dayName = iDay>=0?String(row[iDay]||''):'';
+            const mk = dateStr+'|'+dayName;
+            if (!entriesMap[mk]) {
+              const dayCode = dayName.includes('Montag')?'mon':dayName.includes('Mittwoch')?'wed':dayName.includes('Freitag')?'fri':'ext';
+              const snap = {
+                bodyweight: iBodywt>=0?parseFloat(row[iBodywt])||0:0,
+                squat:      iSq>=0?parseFloat(row[iSq])||0:0,
+                bench:      iBe>=0?parseFloat(row[iBe])||0:0,
+                deadlift:   iDl>=0?parseFloat(row[iDl])||0:0,
+                total:      iTotal>=0?parseFloat(row[iTotal])||0:0,
+                dots:       iDots>=0?parseFloat(row[iDots])||0:0,
+              };
+              entriesMap[mk] = {date:dateStr, dateISO:dateStr, day:dayCode, dayName,
+                liftsMap:{}, notes:iNote>=0&&row[iNote]?String(row[iNote]):'', assist:[], snapshot:snap};
+            }
+            const entry = entriesMap[mk];
+            const exName = iExer>=0?String(row[iExer]||''):'';
+            const si = iSatz>=0?(parseInt(row[iSatz])||1)-1:0;
+            const kg = iKg>=0?parseFloat(row[iKg])||0:0;
+            const reps = iWdh>=0?parseInt(row[iWdh])||0:0;
+            const rpe = iRPE>=0?parseFloat(row[iRPE])||7:7;
+            const inten = iInt>=0?String(row[iInt]||''):'';
+            if (!exName) return;
+            if (!entry.liftsMap[exName]) entry.liftsMap[exName]={name:exName,intensity:inten,setsRaw:[],rpe,topSet:0,totalVol:0};
+            const lift = entry.liftsMap[exName];
+            lift.setsRaw[si]={kg,reps};
+            if(kg>lift.topSet) lift.topSet=kg;
+            lift.totalVol+=kg*reps;
+            if(si===0) lift.rpe=rpe;
+          });
+
+          // Also merge assist history
+          if (wb.SheetNames.includes('History-Assistenz')) {
+            const wsA = wb.Sheets['History-Assistenz'];
+            const rowsA = XLSX.utils.sheet_to_json(wsA, {header:1});
+            if (rowsA.length >= 2) {
+              const hA = rowsA[0].map(h=>String(h||'').trim());
+              const iADate=hA.indexOf('Datum'),iADay=hA.indexOf('Tag'),iAEx=hA.indexOf('Übung'),
+                    iASatz=hA.indexOf('Satz'),iAKg=hA.indexOf('kg'),iAWdh=hA.indexOf('Wdh');
+              rowsA.slice(1).forEach(row => {
+                let dateStr = String(row[iADate]||'').trim();
+                if (!isNaN(row[iADate]) && typeof row[iADate]==='number')
+                  dateStr = new Date(Math.round((row[iADate]-25569)*86400*1000)).toISOString().split('T')[0];
+                const dayName = iADay>=0?String(row[iADay]||''):'';
+                const mk = dateStr+'|'+dayName;
+                if (!entriesMap[mk]) return; // only add to existing entries
+                const entry = entriesMap[mk];
+                const exName = iAEx>=0?String(row[iAEx]||''):'';
+                const si = iASatz>=0?(parseInt(row[iASatz])||1)-1:0;
+                const kg = iAKg>=0?parseFloat(row[iAKg])||0:0;
+                const reps = iAWdh>=0?parseInt(row[iAWdh])||0:0;
+                if (!exName) return;
+                let aEntry = entry.assist.find(a=>a.name===exName);
+                if (!aEntry) { aEntry={name:exName,scheme:'',setsRaw:[],sets:''}; entry.assist.push(aEntry); }
+                aEntry.setsRaw[si]={kg,reps};
+              });
+              // build sets strings for assist
+              Object.values(entriesMap).forEach(e => {
+                (e.assist||[]).forEach(a => {
+                  a.setsRaw = a.setsRaw.filter(Boolean);
+                  a.sets = a.setsRaw.map(s=>`${s.kg}×${s.reps}`).join(', ');
+                });
+              });
+            }
           }
-          const dayName = iDay>=0?String(row[iDay]||''):'';
-          const mk = dateStr+'|'+dayName;
-          if (!entriesMap[mk]) {
-            const dayCode = dayName.includes('Montag')?'mon':dayName.includes('Mittwoch')?'wed':dayName.includes('Freitag')?'fri':'ext';
-            entriesMap[mk] = {date:dateStr, dateISO:dateStr, day:dayCode, dayName, liftsMap:{}, notes:iNote>=0&&row[iNote]?String(row[iNote]):'', assist:[]};
-          }
-          const entry = entriesMap[mk];
-          const exName = iExer>=0?String(row[iExer]||''):'';
-          const si = iSatz>=0?(parseInt(row[iSatz])||1)-1:0;
-          const kg = iKg>=0?parseFloat(row[iKg])||0:0;
-          const reps = iWdh>=0?parseInt(row[iWdh])||0:0;
-          const rpe = iRPE>=0?parseFloat(row[iRPE])||7:7;
-          const inten = iInt>=0?String(row[iInt]||''):'';
-          if (!exName) return;
-          if (!entry.liftsMap[exName]) entry.liftsMap[exName]={name:exName,intensity:inten,setsRaw:[],rpe,topSet:0,totalVol:0};
-          const lift = entry.liftsMap[exName];
-          lift.setsRaw[si]={kg,reps};
-          if(kg>lift.topSet) lift.topSet=kg;
-          lift.totalVol+=kg*reps;
-          if(si===0) lift.rpe=rpe;
-        });
-        const imported = Object.values(entriesMap).map(e=>({...e, lifts:Object.values(e.liftsMap).map(l=>({...l, sets:l.setsRaw.map(s=>`${s.kg}×${s.reps}`).join(', ')}))}));
-        const existingKeys = new Set((state.history||[]).map(e=>e.dateISO+'|'+e.dayName));
-        const newEntries = imported.filter(e=>!existingKeys.has(e.dateISO+'|'+e.dayName));
-        state.history = [...(state.history||[]), ...newEntries].sort((a,b)=>(b.dateISO||b.date)>(a.dateISO||a.date)?1:-1);
-      });
+
+          const imported = Object.values(entriesMap).map(e=>({...e,
+            lifts:Object.values(e.liftsMap).map(l=>({...l, sets:l.setsRaw.filter(Boolean).map(s=>`${s.kg}×${s.reps}`).join(', ')}))}));
+          const existingKeys = new Set((state.history||[]).map(e=>e.dateISO+'|'+e.dayName));
+          const newEntries = imported.filter(e=>!existingKeys.has(e.dateISO+'|'+e.dayName));
+          state.history = [...(state.history||[]), ...newEntries].sort((a,b)=>(b.dateISO||b.date)>(a.dateISO||a.date)?1:-1);
+        }
+      }
 
       persist();
       renderAllPanels();
       renderSettings();
-      showToast('✅ Backup importiert!');
+      const parts = [doORM?'1RM':'', doPool?'Pool':'', doPlan?'Plan':'', doHistory?'History':''].filter(Boolean);
+      showToast('✅ Importiert: ' + parts.join(', '));
     } catch(err) {
       console.error(err);
       showToast('❌ Import fehlgeschlagen: ' + err.message);
