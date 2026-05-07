@@ -244,6 +244,33 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 .import-day-checks{display:flex;gap:10px;margin-top:6px;margin-left:26px;flex-wrap:wrap}
 .import-day-label{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:5px;cursor:pointer}
 .import-day-label input[type=checkbox]{width:16px;height:16px;accent-color:#c084fc;cursor:pointer}
+.tool-selector{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;padding-top:12px}
+.tool-sel-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 8px;cursor:pointer;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tool-sel-btn.active{border-color:#c084fc;background:rgba(192,132,252,0.08)}
+.tool-sel-icon{font-size:24px;display:block}
+.tool-sel-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase}
+.tool-sel-btn.active .tool-sel-label{color:#c084fc}
+/* Plates tool */
+.plates-toggles{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:4px}
+.plate-toggle{display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+.plate-toggle-btn{border-radius:6px;border:2px solid transparent;font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:1px;padding:10px 12px;cursor:pointer;transition:all .15s;min-width:62px;text-align:center}
+.plate-toggle-btn.available{opacity:1}
+.plate-toggle-btn.unavailable{opacity:0.3;border-style:dashed}
+.plate-toggle-label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:1px;margin-top:2px}
+/* Plate result display */
+.plates-result-wrap{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.plates-bar{display:flex;align-items:center;gap:0;margin:16px 0;overflow-x:auto;padding:4px 0;min-height:80px}
+.plate-visual{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;cursor:default;flex-shrink:0;transition:all .2s}
+.bar-collar{width:12px;background:#555;border-radius:2px;height:20px;flex-shrink:0}
+.bar-shaft{background:#888;height:12px;flex:1;min-width:30px;border-radius:2px;flex-shrink:0}
+.plates-summary{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:12px}
+.plates-sum-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.plates-sum-row:last-child{margin-bottom:0;padding-top:8px;border-top:1px solid var(--border)}
+.plates-sum-label{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted)}
+.plates-sum-val{font-family:'Bebas Neue',sans-serif;font-size:28px}
+.plates-list{font-family:'IBM Plex Mono',monospace;font-size:22px;color:var(--text-muted);margin-top:8px;line-height:2.4}
+.plates-list-val{color:var(--text);font-weight:600;font-size:24px}
+.plates-err{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--heavy);text-align:center;padding:20px 0}
 .toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-16px);background:var(--text);color:var(--bg);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:10px 20px;border-radius:6px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
@@ -363,50 +390,89 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
 <div class="view" id="viewTools">
   <div class="tools-wrap">
 
-    <div class="settings-title">1RM RECHNER</div>
-    <div class="tools-card">
-      <div class="tools-desc">Gib dein Trainingsgewicht und die Wiederholungen ein — die App berechnet das geschätzte 1RM nach mehreren Formeln.</div>
-      <div class="tools-input-row">
-        <div class="tools-input-group">
-          <label class="tools-label">GEWICHT</label>
-          <div style="display:flex;align-items:center;gap:6px">
-            <input class="tools-input" id="calc-kg" type="number" inputmode="decimal" step="2.5" min="0" value="100" oninput="calcOneRM()">
-            <span class="tools-unit">kg</span>
+    <!-- Tool selector -->
+    <div class="tool-selector">
+      <button class="tool-sel-btn active" id="toolBtn-1rm" onclick="selectTool('1rm')">
+        <span class="tool-sel-icon">📊</span>
+        <span class="tool-sel-label">1RM Rechner</span>
+      </button>
+      <button class="tool-sel-btn" id="toolBtn-plates" onclick="selectTool('plates')">
+        <span class="tool-sel-icon">🏋️</span>
+        <span class="tool-sel-label">Scheiben Rechner</span>
+      </button>
+    </div>
+
+    <!-- ── TOOL 1: 1RM Rechner ── -->
+    <div id="tool-1rm">
+      <div class="settings-title" style="margin-top:14px">1RM RECHNER</div>
+      <div class="tools-card">
+        <div class="tools-desc">Gib dein Trainingsgewicht und die Wiederholungen ein — die App berechnet das geschätzte 1RM nach mehreren Formeln.</div>
+        <div class="tools-input-row">
+          <div class="tools-input-group">
+            <label class="tools-label">GEWICHT</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="tools-input" id="calc-kg" type="number" inputmode="decimal" step="2.5" min="0" value="100" oninput="calcOneRM()">
+              <span class="tools-unit">kg</span>
+            </div>
+            <div class="weight-adjust" style="margin-top:6px">
+              <button class="adj-btn" onclick="adjCalc('kg',-5)">−5</button>
+              <button class="adj-btn" onclick="adjCalc('kg',-2.5)">−2.5</button>
+              <button class="adj-btn" onclick="adjCalc('kg',2.5)">+2.5</button>
+              <button class="adj-btn" onclick="adjCalc('kg',5)">+5</button>
+            </div>
           </div>
-          <div class="weight-adjust" style="margin-top:6px">
-            <button class="adj-btn" onclick="adjCalc('kg',-5)">−5</button>
-            <button class="adj-btn" onclick="adjCalc('kg',-2.5)">−2.5</button>
-            <button class="adj-btn" onclick="adjCalc('kg',2.5)">+2.5</button>
-            <button class="adj-btn" onclick="adjCalc('kg',5)">+5</button>
+          <div class="tools-input-group">
+            <label class="tools-label">WDHL.</label>
+            <input class="tools-input" id="calc-reps" type="number" inputmode="numeric" min="1" max="30" value="5" oninput="calcOneRM()">
+            <div class="weight-adjust" style="margin-top:6px">
+              <button class="adj-btn" onclick="adjCalc('reps',-1)">−1</button>
+              <button class="adj-btn" onclick="adjCalc('reps',1)">+1</button>
+            </div>
           </div>
         </div>
-        <div class="tools-input-group">
-          <label class="tools-label">WDHL.</label>
-          <input class="tools-input" id="calc-reps" type="number" inputmode="numeric" min="1" max="30" value="5" oninput="calcOneRM()">
-          <div class="weight-adjust" style="margin-top:6px">
-            <button class="adj-btn" onclick="adjCalc('reps',-1)">−1</button>
-            <button class="adj-btn" onclick="adjCalc('reps',1)">+1</button>
-          </div>
+        <div class="tools-result" id="calc-result-main" style="display:none">
+          <div class="tools-result-label">Geschätztes 1RM</div>
+          <div class="tools-result-val" id="calc-1rm-val">—</div>
+          <div class="tools-result-sub" id="calc-1rm-sub"></div>
+        </div>
+        <div id="calc-formulas" style="display:none">
+          <div class="section-label" style="margin-top:16px">Formeln im Vergleich</div>
+          <div class="tools-formula-grid" id="calc-formula-grid"></div>
+        </div>
+        <div id="calc-pct-section" style="display:none">
+          <div class="section-label" style="margin-top:16px">Trainingsgewichte</div>
+          <div class="tools-pct-table" id="calc-pct-table"></div>
         </div>
       </div>
+    </div>
 
-      <!-- Result big display -->
-      <div class="tools-result" id="calc-result-main" style="display:none">
-        <div class="tools-result-label">Geschätztes 1RM</div>
-        <div class="tools-result-val" id="calc-1rm-val">—</div>
-        <div class="tools-result-sub" id="calc-1rm-sub"></div>
-      </div>
+    <!-- ── TOOL 2: Scheiben Rechner ── -->
+    <div id="tool-plates" style="display:none">
+      <div class="settings-title" style="margin-top:14px">SCHEIBEN RECHNER</div>
+      <div class="tools-card">
+        <div class="tools-desc">Zeigt die Belegung einer Seite der Langhantel. Stange = 20 kg.</div>
+        <div class="tools-input-row">
+          <div class="tools-input-group" style="flex:1">
+            <label class="tools-label">ZIELGEWICHT</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input class="tools-input" id="plates-kg" type="number" inputmode="decimal" step="2.5" min="20" value="100" oninput="calcPlates()">
+              <span class="tools-unit">kg</span>
+            </div>
+            <div class="weight-adjust" style="margin-top:6px">
+              <button class="adj-btn" onclick="adjPlates(-5)">−5</button>
+              <button class="adj-btn" onclick="adjPlates(-2.5)">−2.5</button>
+              <button class="adj-btn" onclick="adjPlates(2.5)">+2.5</button>
+              <button class="adj-btn" onclick="adjPlates(5)">+5</button>
+            </div>
+          </div>
+        </div>
 
-      <!-- Formula breakdown -->
-      <div id="calc-formulas" style="display:none">
-        <div class="section-label" style="margin-top:16px">Formeln im Vergleich</div>
-        <div class="tools-formula-grid" id="calc-formula-grid"></div>
-      </div>
+        <!-- Available plates toggles -->
+        <div class="section-label" style="margin-top:14px">Verfügbare Scheiben (je Seite)</div>
+        <div class="plates-toggles" id="plates-toggles"></div>
 
-      <!-- Percentage table -->
-      <div id="calc-pct-section" style="display:none">
-        <div class="section-label" style="margin-top:16px">Trainingsgewichte</div>
-        <div class="tools-pct-table" id="calc-pct-table"></div>
+        <!-- Result -->
+        <div id="plates-result"></div>
       </div>
     </div>
 
@@ -432,6 +498,7 @@ const DEFAULT_STATE = {
   oneRM: { 'Bench Press': 110, 'Squat': 160, 'Deadlift': 190 },
   bodyweight: 90,
   extSessionName: '',
+  unavailablePlates: [],  // e.g. [20, 15]
   dayExercises: {
     mon: [{ name:'Bench Press', intensity:'light' }, { name:'Squat', intensity:'heavy' }],
     wed: [{ name:'Bench Press', intensity:'medium' }, { name:'Deadlift', intensity:'heavy' }],
@@ -477,6 +544,7 @@ function loadState() {
         oneRM: p.oneRM || DEFAULT_STATE.oneRM,
         bodyweight: p.bodyweight || DEFAULT_STATE.bodyweight,
         extSessionName: p.extSessionName || '',
+        unavailablePlates: p.unavailablePlates || [],
         dayExercises: p.dayExercises || DEFAULT_STATE.dayExercises,
         assistExercises: p.assistExercises || DEFAULT_STATE.assistExercises,
         sets: p.sets || DEFAULT_STATE.sets,
@@ -1947,6 +2015,138 @@ function saveSettings() {
 // VIEW SWITCHING
 // ══════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════
+// TOOLS — TOOL SELECTOR
+// ══════════════════════════════════════════════════════════
+function selectTool(id) {
+  document.querySelectorAll('.tool-sel-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('toolBtn-' + id).classList.add('active');
+  document.getElementById('tool-1rm').style.display    = id === '1rm'    ? '' : 'none';
+  document.getElementById('tool-plates').style.display = id === 'plates' ? '' : 'none';
+  if (id === '1rm')    calcOneRM();
+  if (id === 'plates') { renderPlateToggles(); calcPlates(); }
+}
+
+// ══════════════════════════════════════════════════════════
+// TOOLS — SCHEIBEN RECHNER
+// ══════════════════════════════════════════════════════════
+const ALL_PLATES = [
+  { kg:25,  color:'#c0392b', textColor:'#fff' },
+  { kg:20,  color:'#2980b9', textColor:'#fff' },
+  { kg:15,  color:'#f0c040', textColor:'#111' },
+  { kg:10,  color:'#27ae60', textColor:'#fff' },
+  { kg:5,   color:'#f0ede8', textColor:'#111' },
+  { kg:2.5, color:'#e67e22', textColor:'#fff' },
+  { kg:1.25,color:'#888',    textColor:'#fff' },
+];
+
+const BAR_WEIGHT = 20;
+
+function renderPlateToggles() {
+  const container = document.getElementById('plates-toggles');
+  if (!container) return;
+  const unavail = state.unavailablePlates || [];
+  container.innerHTML = ALL_PLATES.map(p => {
+    const off = unavail.includes(p.kg);
+    return '<div class="plate-toggle" onclick="togglePlateAvail(' + p.kg + ')">'
+      + '<div class="plate-toggle-btn ' + (off ? 'unavailable' : 'available') + '" '
+      + 'style="background:' + p.color + ';color:' + p.textColor + ';border-color:' + p.color + '">'
+      + p.kg + '</div>'
+      + '<div class="plate-toggle-label" style="color:' + (off ? 'var(--heavy)' : 'var(--green)') + '">' + (off ? 'N/A' : 'OK') + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function togglePlateAvail(kg) {
+  if (!state.unavailablePlates) state.unavailablePlates = [];
+  const idx = state.unavailablePlates.indexOf(kg);
+  if (idx >= 0) state.unavailablePlates.splice(idx, 1);
+  else state.unavailablePlates.push(kg);
+  persist();
+  renderPlateToggles();
+  calcPlates();
+}
+
+function adjPlates(delta) {
+  const el = document.getElementById('plates-kg');
+  if (!el) return;
+  let val = parseFloat(el.value) || BAR_WEIGHT;
+  val = Math.max(BAR_WEIGHT, Math.round((val + delta) * 2) / 2);
+  el.value = val;
+  calcPlates();
+}
+
+function calcPlates() {
+  const el = document.getElementById('plates-kg');
+  const target = parseFloat(el ? el.value : 0) || 0;
+  const resultEl = document.getElementById('plates-result');
+  if (!resultEl) return;
+
+  if (target < BAR_WEIGHT) {
+    resultEl.innerHTML = '<div class="plates-err">Zielgewicht muss mindestens ' + BAR_WEIGHT + ' kg (Stange) sein.</div>';
+    return;
+  }
+
+  const perSide = (target - BAR_WEIGHT) / 2;
+  const unavail = state.unavailablePlates || [];
+  const available = ALL_PLATES.filter(p => !unavail.includes(p.kg));
+
+  // Greedy algorithm
+  let remaining = perSide;
+  const usedPlates = [];
+  for (const plate of available) {
+    while (remaining >= plate.kg - 0.001) {
+      usedPlates.push(plate);
+      remaining = Math.round((remaining - plate.kg) * 1000) / 1000;
+    }
+  }
+
+  const achieved = BAR_WEIGHT + usedPlates.reduce((a, p) => a + p.kg, 0) * 2;
+  const diff = Math.round((target - achieved) * 100) / 100;
+
+  // Build visual bar
+  const barPlates = [...usedPlates].reverse(); // inner to outer for visual
+  const plateVisuals = barPlates.map(p => {
+    const h = Math.max(70, Math.min(130, 50 + p.kg * 3.2));
+    const w = Math.max(34, Math.min(52, 22 + p.kg * 0.9));
+    return '<div class="plate-visual" style="height:' + h + 'px;width:' + w + 'px;background:' + p.color
+      + ';color:' + p.textColor + ';margin:0 4px">' + p.kg + '</div>';
+  }).join('');
+
+  // Build list
+  const counts = {};
+  usedPlates.forEach(p => { counts[p.kg] = (counts[p.kg]||0) + 1; });
+  const listHtml = Object.entries(counts).sort((a,b)=>parseFloat(b[0])-parseFloat(a[0])).map(([kg, n]) => {
+    const plate = ALL_PLATES.find(p => p.kg === parseFloat(kg));
+    const dot = '<span style="display:inline-block;width:18px;height:18px;border-radius:3px;background:' + (plate?plate.color:'#888') + ';margin-right:10px;vertical-align:middle"></span>';
+    return '<div>' + dot + '<span class="plates-list-val">' + n + ' × ' + kg + ' kg</span></div>';
+  }).join('');
+
+  const errHtml = diff !== 0
+    ? '<div style="font-family:monospace;font-size:11px;color:var(--heavy);margin-top:6px">⚠ ' + diff + ' kg nicht darstellbar mit verfügbaren Scheiben</div>'
+    : '';
+
+  resultEl.innerHTML = '<div class="plates-result-wrap">'
+    // Visual bar
+    + '<div style="display:flex;align-items:center;justify-content:center">'
+    + '<div class="bar-collar"></div>'
+    + '<div class="bar-shaft" style="width:' + Math.max(30, 30 - usedPlates.length*2) + 'px"></div>'
+    + plateVisuals
+    + '<div class="bar-collar"></div>'
+    + '</div>'
+    // Summary
+    + '<div class="plates-summary">'
+    + '<div class="plates-sum-row"><span class="plates-sum-label">Zielgewicht</span><span class="plates-sum-val">' + target + ' kg</span></div>'
+    + '<div class="plates-sum-row"><span class="plates-sum-label">Erreicht</span><span class="plates-sum-val" style="color:' + (diff===0?'var(--green)':'var(--heavy)') + '">' + achieved + ' kg</span></div>'
+    + '<div class="plates-sum-row"><span class="plates-sum-label">Scheiben/Seite</span><span class="plates-sum-val">' + usedPlates.length + '</span></div>'
+    + '</div>'
+    // Plate list
+    + '<div class="section-label" style="margin-top:12px">Scheiben je Seite</div>'
+    + '<div class="plates-list">' + (listHtml || '<span style="color:var(--text-muted)">Keine Scheiben nötig</span>') + '</div>'
+    + errHtml
+    + '</div>';
+}
+
+// ══════════════════════════════════════════════════════════
 // TOOLS — 1RM RECHNER
 // ══════════════════════════════════════════════════════════
 function round25(v) { return Math.round(v / 2.5) * 2.5; }
@@ -2039,7 +2239,7 @@ function showView(v) {
   document.getElementById('nav'+cap(v)).classList.add('active');
   if (v==='progress') renderProgress();
   if (v==='settings') renderSettings();
-  if (v==='tools') calcOneRM();
+  if (v==='tools') { calcOneRM(); renderPlateToggles(); }
   window.scrollTo(0,0);
 }
 
