@@ -254,7 +254,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <div class="topbar-title">LIFT</div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
     <div class="topbar-date" id="topbarDate"></div>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.0.7</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.0.8</div>
   </div>
 </div>
 
@@ -431,6 +431,7 @@ const STORAGE_KEY = 'lift_powerlifting';
 const DEFAULT_STATE = {
   oneRM: { 'Bench Press': 110, 'Squat': 160, 'Deadlift': 190 },
   bodyweight: 90,
+  extSessionName: '',
   dayExercises: {
     mon: [{ name:'Bench Press', intensity:'light' }, { name:'Squat', intensity:'heavy' }],
     wed: [{ name:'Bench Press', intensity:'medium' }, { name:'Deadlift', intensity:'heavy' }],
@@ -475,6 +476,7 @@ function loadState() {
       state = { ...DEFAULT_STATE, ...p,
         oneRM: p.oneRM || DEFAULT_STATE.oneRM,
         bodyweight: p.bodyweight || DEFAULT_STATE.bodyweight,
+        extSessionName: p.extSessionName || '',
         dayExercises: p.dayExercises || DEFAULT_STATE.dayExercises,
         assistExercises: p.assistExercises || DEFAULT_STATE.assistExercises,
         sets: p.sets || DEFAULT_STATE.sets,
@@ -586,6 +588,12 @@ function renderPanel(day) {
         <button class="ext-add-btn" onclick="extAddCustom()">+ ADD</button>
       </div>
       ${extTagsHtml}
+      <div class="section-label" style="margin-top:14px">Name für dieses Training (optional)</div>
+      <input class="ext-input" id="ext-session-name"
+        placeholder="z.B. Wettkampfvorbereitung, Peaking..."
+        value="${state.extSessionName||''}"
+        oninput="state.extSessionName=this.value"
+        style="width:100%;margin-top:0">
     </div>`;
   }
 
@@ -855,7 +863,14 @@ function saveWorkout(day) {
   const entry = {
     date: new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}),
     dateISO: new Date().toISOString().split('T')[0],
-    day, dayName: dayNames[day],
+    day, dayName: (() => {
+      if (day === 'ext') {
+        const customName = (state.extSessionName || '').trim();
+        const exNames = (state.dayExercises.ext||[]).map(e=>e.name).join(', ');
+        return customName ? 'Zusatz: ' + customName : ('Zusatz' + (exNames ? ' — '+exNames : ''));
+      }
+      return dayNames[day];
+    })(),
     lifts: mainExes.map((ex, ei) => {
       const k = mainKey(day, ei);
       const sets = state.sets[k] || [];
@@ -884,6 +899,7 @@ function saveWorkout(day) {
       const dots = calcDOTS(sbd.total, bw);
       return { squat: sbd.squat, bench: sbd.bench, deadlift: sbd.deadlift, total: sbd.total, bodyweight: bw, dots };
     })(),
+    sessionName: day === 'ext' ? (state.extSessionName||'').trim() : '',
   };
 
   if (!state.history) state.history = [];
@@ -893,6 +909,7 @@ function saveWorkout(day) {
   // Reset done states
   mainExes.forEach((_, ei) => { state.sets[mainKey(day,ei)].forEach(s=>s.done=false); });
   assistExes.forEach((_, ei) => { const k=assistKey(day,ei); if(state.assistSets[k]) state.assistSets[k].forEach(s=>s.done=false); });
+  if (day === 'ext') state.extSessionName = '';
 
   persist();
   renderPanel(day);
@@ -1115,6 +1132,7 @@ function importExcel(input) {
             dateISO: dateStr.includes('-') ? dateStr : '',
             day: dayCode, dayName,
             liftsMap: {}, notes: iNote >= 0 && row[iNote] ? String(row[iNote]) : '',
+            sessionName: iSessNameE >= 0 && row[iSessNameE] ? String(row[iSessNameE]) : '',
           };
         }
 
@@ -1179,7 +1197,7 @@ function exportExcel() {
     (entry.lifts||[]).forEach(lift => {
       const snap = entry.snapshot || {};
       (lift.setsRaw||[{kg:lift.topSet,reps:'?'}]).forEach((s,si) => {
-        rows1.push([entry.dateISO||entry.date, entry.dayName, lift.name, lift.intensity||'',
+        rows1.push([entry.dateISO||entry.date, entry.dayName, si===0?(entry.sessionName||''):'', lift.name, lift.intensity||'',
           si+1, s.kg, s.reps, s.reps!=='?'?s.kg*s.reps:'', si===0?lift.rpe:'',
           si===0?calcE1RM(lift.topSet,(lift.setsRaw||[{reps:1}])[0].reps):'',
           si===0?(entry.notes||''):'',
@@ -1194,7 +1212,7 @@ function exportExcel() {
     });
   });
   const ws1 = XLSX.utils.aoa_to_sheet(rows1);
-  ws1['!cols'] = [12,10,18,10,6,8,6,10,6,10,30,8,12,10,10,12,10].map(w=>({wch:w}));
+  ws1['!cols'] = [12,10,16,18,10,6,8,6,10,6,10,30,8,12,10,10,12,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws1, 'Hauptübungen');
 
   // Sheet 2: Assistenz
@@ -1512,6 +1530,12 @@ function extLoadFromHistory() {
   renderPanel('ext');
   switchDay('ext');
   updateTabSubtexts();
+  // Restore session name if entry had a custom one (after 'Zusatz: ')
+  if (entry.day === 'ext' && entry.dayName && entry.dayName.startsWith('Zusatz: ')) {
+    state.extSessionName = entry.dayName.replace(/^Zusatz: /, '');
+  } else {
+    state.extSessionName = '';
+  }
   showToast('↩ ' + entry.dayName + ' vom ' + entry.date + ' geladen');
 }
 
@@ -1664,7 +1688,7 @@ function exportSettings() {
   XLSX.utils.book_append_sheet(wb, ws4, 'Uebungs-Pool');
 
   // Sheet 5: Trainings-History (Hauptübungen)
-  const histRows = [['Datum','Tag','Übung','Intensität','Satz','kg','Wdh','Volumen','RPE','e1RM','Notizen','KG','Squat 1RM','Bench 1RM','DL 1RM','SBD Total','DOTS']];
+  const histRows = [['Datum','Tag','Trainingsname','Übung','Intensität','Satz','kg','Wdh','Volumen','RPE','e1RM','Notizen','KG','Squat 1RM','Bench 1RM','DL 1RM','SBD Total','DOTS']];
   (state.history||[]).forEach(entry => {
     (entry.lifts||[]).forEach(lift => {
       const snap = entry.snapshot || {};
@@ -1686,7 +1710,7 @@ function exportSettings() {
     });
   });
   const ws5 = XLSX.utils.aoa_to_sheet(histRows);
-  ws5['!cols'] = [12,10,18,10,6,8,6,10,6,10,30,8,12,10,10,12,10].map(w=>({wch:w}));
+  ws5['!cols'] = [12,10,16,18,10,6,8,6,10,6,10,30,8,12,10,10,12,10].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb, ws5, 'History-Hauptuebungen');
 
   // Sheet 6: History Assistenz
@@ -1808,6 +1832,7 @@ function importSettings(input) {
         if (rows.length >= 2) {
           const header = rows[0].map(h => String(h||'').trim());
           const iDate=header.indexOf('Datum'), iDay=header.indexOf('Tag'), iExer=header.indexOf('Übung'),
+                iSessName=header.indexOf('Trainingsname'),
                 iInt=header.indexOf('Intensität'), iSatz=header.indexOf('Satz'), iKg=header.indexOf('kg'),
                 iWdh=header.indexOf('Wdh'), iRPE=header.indexOf('RPE'), iNote=header.indexOf('Notizen'),
                 iBodywt=header.indexOf('KG'), iSq=header.indexOf('Squat 1RM'), iBe=header.indexOf('Bench 1RM'),
@@ -1830,7 +1855,8 @@ function importSettings(input) {
                 dots:       iDots>=0?parseFloat(row[iDots])||0:0,
               };
               entriesMap[mk] = {date:dateStr, dateISO:dateStr, day:dayCode, dayName,
-                liftsMap:{}, notes:iNote>=0&&row[iNote]?String(row[iNote]):'', assist:[], snapshot:snap};
+                liftsMap:{}, notes:iNote>=0&&row[iNote]?String(row[iNote]):'', assist:[], snapshot:snap,
+                sessionName: iSessName>=0&&row[iSessName]?String(row[iSessName]):''};
             }
             const entry = entriesMap[mk];
             const exName = iExer>=0?String(row[iExer]||''):'';
