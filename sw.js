@@ -1,8 +1,8 @@
-const CACHE = 'lift-v1.0.0';
+const CACHE = 'lift-v1.0.1';
 const ASSETS = [
   './lift_tracker.html',
+  './xlsx.full.min.js',
   'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
 ];
 
 self.addEventListener('install', e => {
@@ -34,7 +34,7 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // Cache-first für Fonts und Bibliotheken
+  // Cache-first für alle anderen Dateien
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
