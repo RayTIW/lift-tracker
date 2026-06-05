@@ -1291,7 +1291,7 @@ function exportExcel() {
       (lift.setsRaw||[{kg:lift.topSet,reps:'?'}]).filter(Boolean).forEach((s,si) => {
         rows1.push([entry.dateISO||entry.date, entry.dayName, si===0?(entry.sessionName||''):'', lift.name, lift.intensity||'',
           si+1, s.kg, s.reps, s.reps!=='?'?s.kg*s.reps:'', si===0?lift.rpe:'',
-          si===0?calcE1RM(lift.topSet,(lift.setsRaw||[{reps:1}])[0].reps):'',
+          si===0?calcE1RM(lift.topSet,((lift.setsRaw||[]).filter(Boolean)[0]||{reps:1}).reps):'',
           si===0?(entry.notes||''):'',
           si===0?(snap.bodyweight||''):'',
           si===0?(snap.squat||''):'',
@@ -1327,7 +1327,7 @@ function exportExcel() {
     (entry.lifts||[]).forEach(l => {
       if(!exMap[l.name]) exMap[l.name]=[];
       exMap[l.name].push({date:entry.dateISO||entry.date, topSet:l.topSet, rpe:l.rpe, vol:l.totalVol||0,
-        e1rm: l.setsRaw?calcE1RM(l.topSet,l.setsRaw[0].reps):''});
+        e1rm: (l.setsRaw&&l.setsRaw.filter(Boolean).length)?calcE1RM(l.topSet,l.setsRaw.filter(Boolean)[0].reps):''}); 
     });
   });
   Object.entries(exMap).forEach(([name,es])=>es.forEach(e=>rows3.push([name,e.date,e.topSet,e.rpe,e.vol,e.e1rm])));
