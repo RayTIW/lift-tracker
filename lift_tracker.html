@@ -971,7 +971,7 @@ function saveWorkout(day) {
         topSet: sets.length ? Math.max(...sets.map(s=>s.kg)) : 0,
         totalVol: sets.reduce((a,s)=>a+(s.kg*s.reps),0),
         rpe: state.rpe[k] || 7,
-        setsRaw: sets.map(s=>({kg:s.kg,reps:s.reps})),
+        setsRaw: sets.filter(Boolean).map(s=>({kg:s.kg,reps:s.reps})),
       };
     }),
     assist: assistExes.map((ex, ei) => {
@@ -980,7 +980,7 @@ function saveWorkout(day) {
       return {
         name: ex.name, scheme: ex.scheme,
         sets: sets.map(s=>`${s.kg}×${s.reps}`).join(', '),
-        setsRaw: sets.map(s=>({kg:s.kg,reps:s.reps})),
+        setsRaw: sets.filter(Boolean).map(s=>({kg:s.kg,reps:s.reps})),
       };
     }),
     notes: state.notes[day] || '',
@@ -1046,7 +1046,7 @@ function openDetail(idx) {
       const bt = badgeText[lift.intensity] || lift.intensity || '';
       const setsRaw = lift.setsRaw || [];
       const vol = lift.totalVol || setsRaw.reduce((a,s)=>a+(s.kg*s.reps),0);
-      const setRows = setsRaw.map((s,si) =>
+      const setRows = (setsRaw||[]).filter(Boolean).map((s,si) =>
         '<div class="detail-set-row">'
         + '<div><div class="detail-set-label">#</div><div class="detail-set-num">' + (si+1) + '</div></div>'
         + '<div><div class="detail-set-label">KG</div><div class="detail-set-val">' + s.kg + '</div></div>'
@@ -1072,7 +1072,7 @@ function openDetail(idx) {
     html += '<div class="section-label">Assistenzübungen</div>';
     (e.assist||[]).forEach(a => {
       if (!a.setsRaw || !a.setsRaw.length) return;
-      const setRows = a.setsRaw.map((s,si) =>
+      const setRows = (a.setsRaw||[]).filter(Boolean).map((s,si) =>
         '<div class="detail-set-row">'
         + '<div><div class="detail-set-label">#</div><div class="detail-set-num">' + (si+1) + '</div></div>'
         + '<div><div class="detail-set-label">KG</div><div class="detail-set-val">' + s.kg + '</div></div>'
@@ -1116,7 +1116,7 @@ function renderProgress() {
         (entry.lifts||[]).filter(l=>l.name===ex.name).forEach(l => {
           if (l.topSet > exerciseMap[ex.name].topKg) {
             exerciseMap[ex.name].topKg=l.topSet;
-            (l.setsRaw||[]).forEach(s => { const e=calcE1RM(s.kg,s.reps); if(e>exerciseMap[ex.name].e1RM) exerciseMap[ex.name].e1RM=e; });
+            (l.setsRaw||[]).filter(Boolean).forEach(s => { const e=calcE1RM(s.kg,s.reps); if(e>exerciseMap[ex.name].e1RM) exerciseMap[ex.name].e1RM=e; });
           }
         });
       });
@@ -1249,7 +1249,7 @@ function importExcel(input) {
         ...e,
         lifts: Object.values(e.liftsMap).map(l => ({
           ...l,
-          sets: l.setsRaw.map(s=>`${s.kg}×${s.reps}`).join(', '),
+          sets: (l.setsRaw||[]).filter(Boolean).map(s=>`${s.kg}×${s.reps}`).join(', '),
         })),
         assist: [],
       }));
@@ -1288,7 +1288,7 @@ function exportExcel() {
   state.history.forEach(entry => {
     (entry.lifts||[]).forEach(lift => {
       const snap = entry.snapshot || {};
-      (lift.setsRaw||[{kg:lift.topSet,reps:'?'}]).forEach((s,si) => {
+      (lift.setsRaw||[{kg:lift.topSet,reps:'?'}]).filter(Boolean).forEach((s,si) => {
         rows1.push([entry.dateISO||entry.date, entry.dayName, si===0?(entry.sessionName||''):'', lift.name, lift.intensity||'',
           si+1, s.kg, s.reps, s.reps!=='?'?s.kg*s.reps:'', si===0?lift.rpe:'',
           si===0?calcE1RM(lift.topSet,(lift.setsRaw||[{reps:1}])[0].reps):'',
@@ -1311,7 +1311,7 @@ function exportExcel() {
   const rows2 = [['Datum','Tag','Übung','Satz','kg','Wdh','Volumen']];
   state.history.forEach(entry => {
     (entry.assist||[]).forEach(a => {
-      (a.setsRaw||[]).forEach((s,si) => {
+      (a.setsRaw||[]).filter(Boolean).forEach((s,si) => {
         rows2.push([entry.dateISO||entry.date, entry.dayName, a.name, si+1, s.kg, s.reps, s.kg*s.reps]);
       });
     });
@@ -1353,7 +1353,7 @@ function exportExcel() {
   const filename = 'Powerlifting_' + new Date().toISOString().split('T')[0] + '.xlsx';
   xlsxDownload(wb, filename);
   showToast('Exportiert: ' + filename);
-  } catch(err) { alert('exportExcel Fehler:\n' + err.message + '\n' + err.stack.split('\n').slice(0,3).join('\n')); console.error('exportExcel:', err); }
+  } catch(err) { showToast('Export Fehler: ' + err.message); console.error('exportExcel:', err); }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1599,7 +1599,7 @@ function extLoadFromHistory() {
     const k = mainKey('ext', ei);
     // Use the saved sets if available, else just top set
     if (lift.setsRaw && lift.setsRaw.length) {
-      state.sets[k] = lift.setsRaw.map(s => ({ kg: s.kg, reps: s.reps, done: false }));
+      state.sets[k] = (lift.setsRaw||[]).filter(Boolean).map(s => ({ kg: s.kg, reps: s.reps, done: false }));
     } else {
       const kg = lift.topSet || 0;
       state.sets[k] = [{kg, reps:3, done:false}, {kg, reps:3, done:false}, {kg, reps:3, done:false}];
@@ -1616,7 +1616,7 @@ function extLoadFromHistory() {
     const scheme = sets + '×' + reps;
     state.assistExercises.ext.push({ name: a.name, scheme, sets, kg });
     const k = assistKey('ext', ei);
-    state.assistSets[k] = a.setsRaw.map(s => ({ kg: s.kg, reps: s.reps, done: false }));
+    state.assistSets[k] = (a.setsRaw||[]).filter(Boolean).map(s => ({ kg: s.kg, reps: s.reps, done: false }));
   });
 
   persist();
@@ -1786,7 +1786,7 @@ function exportSettings() {
   (state.history||[]).forEach(entry => {
     (entry.lifts||[]).forEach(lift => {
       const snap = entry.snapshot || {};
-      (lift.setsRaw||[{kg:lift.topSet||0,reps:0}]).forEach((s,si) => {
+      (lift.setsRaw||[{kg:lift.topSet||0,reps:0}]).filter(Boolean).forEach((s,si) => {
         histRows.push([
           entry.dateISO||entry.date, entry.dayName, lift.name, lift.intensity||'',
           si+1, s.kg, s.reps, s.reps?s.kg*s.reps:'',
@@ -1811,7 +1811,7 @@ function exportSettings() {
   const histAssist = [['Datum','Tag','Übung','Satz','kg','Wdh','Volumen']];
   (state.history||[]).forEach(entry => {
     (entry.assist||[]).forEach(a => {
-      (a.setsRaw||[]).forEach((s,si) => {
+      (a.setsRaw||[]).filter(Boolean).forEach((s,si) => {
         histAssist.push([entry.dateISO||entry.date, entry.dayName, a.name, si+1, s.kg, s.reps, s.kg*s.reps]);
       });
     });
@@ -1823,7 +1823,7 @@ function exportSettings() {
   const filename = 'LIFT_Backup_' + new Date().toISOString().split('T')[0] + '.xlsx';
   xlsxDownload(wb, filename);
   showToast('Exportiert: ' + filename);
-  } catch(err) { alert('exportSettings Fehler:\n' + err.message + '\n' + err.stack.split('\n').slice(0,3).join('\n')); console.error('exportSettings:', err); }
+  } catch(err) { showToast('Export Fehler: ' + err.message); console.error('exportSettings:', err); }
 }
 
 function importSettings(input) {
@@ -2005,7 +2005,7 @@ function importSettings(input) {
           }
 
           const imported = Object.values(entriesMap).map(e=>({...e,
-            lifts:Object.values(e.liftsMap).map(l=>({...l, sets:l.setsRaw.filter(Boolean).map(s=>`${s.kg}×${s.reps}`).join(', ')}))}));
+            lifts:Object.values(e.liftsMap).map(l=>({...l, sets:(l.setsRaw||[]).filter(Boolean).map(s=>`${s.kg}×${s.reps}`).join(', ')}))}));
           const existingKeys = new Set((state.history||[]).map(e=>e.dateISO+'|'+e.dayName));
           const newEntries = imported.filter(e=>!existingKeys.has(e.dateISO+'|'+e.dayName));
           state.history = [...(state.history||[]), ...newEntries].sort((a,b)=>(b.dateISO||b.date)>(a.dateISO||a.date)?1:-1);
