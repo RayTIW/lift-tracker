@@ -1288,7 +1288,8 @@ function importExcel(input) {
 // EXCEL EXPORT
 // ══════════════════════════════════════════════════════════
 function exportExcel() {
-  if (!state.history || !state.history.length) { showToast('Keine Daten!'); return; }
+  try {
+  if (!state.history || !state.history.length) { showToast('Keine Daten — erst ein Training speichern!'); return; }
   const wb = XLSX.utils.book_new();
 
   // Sheet 1: Hauptübungen Detail
@@ -1361,6 +1362,7 @@ function exportExcel() {
   const filename = 'Powerlifting_' + new Date().toISOString().split('T')[0] + '.xlsx';
   xlsxDownload(wb, filename);
   showToast('Exportiert: ' + filename);
+  } catch(err) { showToast('Fehler: ' + err.message); console.error('exportExcel:', err); }
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1739,6 +1741,7 @@ function removeFromPool(i) {
 // SETTINGS BACKUP EXPORT / IMPORT
 // ══════════════════════════════════════════════════════════
 function exportSettings() {
+  try {
   const wb = XLSX.utils.book_new();
 
   // Sheet 1: 1RM + bodyweight
@@ -1829,6 +1832,7 @@ function exportSettings() {
   const filename = 'LIFT_Backup_' + new Date().toISOString().split('T')[0] + '.xlsx';
   xlsxDownload(wb, filename);
   showToast('Exportiert: ' + filename);
+  } catch(err) { showToast('Fehler: ' + err.message); console.error('exportSettings:', err); }
 }
 
 function importSettings(input) {
