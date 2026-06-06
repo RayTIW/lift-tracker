@@ -281,7 +281,7 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
   <div class="topbar-title">LIFT</div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
     <div class="topbar-date" id="topbarDate"></div>
-    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.0.9</div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:1px">v1.1.0</div>
   </div>
 </div>
 
@@ -370,6 +370,17 @@ body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-ser
         <input type="file" id="settingsImportInput" accept=".xlsx" style="display:none" onchange="importSettings(this)">
       </div>
     </div>
+    <div class="settings-title" style="margin-top:20px">APP TEILEN</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;text-align:center">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">
+        QR-Code abscannen um die App auf einem anderen Gerät zu öffnen und zu installieren.
+      </div>
+      <div id="qrcode" style="display:inline-block;background:#fff;padding:14px;border-radius:8px;margin-bottom:12px"></div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);word-break:break-all">
+        raytiw.github.io/lift-tracker/
+      </div>
+    </div>
+
     <button class="save-settings-btn" id="saveSettingsBtn" onclick="saveSettings()">EINSTELLUNGEN SPEICHERN</button>
   </div>
 </div>
@@ -1470,6 +1481,7 @@ function renderSettings() {
   renderORMCard();
   renderDotsCard();
   setTimeout(renderPoolConfig, 0);
+  setTimeout(renderQR, 50);
   const container = document.getElementById('dayCfgContainer');
   const days = ['mon','wed','fri','ext'];
   const dayNames = {mon:'MONTAG',wed:'MITTWOCH',fri:'FREITAG',ext:'ZUSATZTAG'};
@@ -2273,6 +2285,14 @@ function showView(v) {
 // ══════════════════════════════════════════════════════════
 // HELPERS
 // ══════════════════════════════════════════════════════════
+function renderQR() {
+  const container = document.getElementById('qrcode');
+  if (!container || container.dataset.rendered) return;
+  container.dataset.rendered = '1';
+  const url = encodeURIComponent('https://raytiw.github.io/lift-tracker/');
+  container.innerHTML = '<img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + url + '&format=png&margin=0&color=0-0-0&bgcolor=255-255-255" width="200" height="200" style="display:block;border-radius:4px" alt="QR Code">';
+}
+
 function xlsxDownload(wb, filename) {
   const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
   const blob = new Blob([wbout], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
